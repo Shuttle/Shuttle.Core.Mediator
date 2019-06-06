@@ -4,26 +4,25 @@
 PM> Install-Package Shuttle.Core.Mediator
 ```
 
-The Shuttle.Core.Mediator package provides an asynchronous mediator implementation using well established messaging semantics.
-
-The `IMediator` interface contains the following methods that are implemented by the default `Mediator` implementation:
+The Shuttle.Core.Mediator package provides an asynchronous mediator implementation.
 
 ```c#
-Task<TResponse> Request<TResponse>(object request, CancellationToken cancellationToken = default);
 Task Send(object message, CancellationToken cancellationToken = default);
-Task Publish(object message, CancellationToken cancellationToken = default);
 ```
 
-The default `Mediator` has a dependency on an `IComponentResolver` implementation in order to resolve the various observers that implement the relevant message observer interfaces.
+The default `Mediator` has a dependency on an `IComponentResolver` implementation in order to resolve the various observers that implement the `IMessageObserver` interface.
 
-## Request/Response
+## IMessageObserver
 
-When using the `Request<TResponse>` method a *single* observer will be resolved.  The observer must implement the `IRequestObserver` interface.
+```c#
+public interface IMessageObserver<in T>
+{
+    void ProcessMessage(IObserverContext<T> context);
+}
+```
 
-## Command
+An observer would handle the message that is sent on using the mediator.
 
-When using the `Send` method a *single* observer will be resolved.  The observer must implement the `IMessageObserver` interface.
+There are not *request/response* semantics and the design philosophy here is that the message encapsulates the state that is passed along in a *pipes & filters* approach.
 
-## Event
-
-When using the `Publish` method *all* observers that implement the relevant `IMessageObserver` will be resolved.
+There may be *N* observers of the message.  In addition observers may be marked with the `[BeforeObserverAttribute]` attribute if the observer runs before the observer proper that does the message handling.  An observer may also be marked with the `[AfterObserverAttribute]` in order to have the observer handle the message after the observer proper has completed the message handling.

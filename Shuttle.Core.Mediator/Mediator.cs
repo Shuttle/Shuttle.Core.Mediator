@@ -11,15 +11,13 @@ namespace Shuttle.Core.Mediator
 {
     public class Mediator : IMediator
     {
+        private static readonly Type BeforeObserverAttributeType = typeof(BeforeObserverAttribute);
+        private static readonly Type AfterObserverAttributeType = typeof(AfterObserverAttribute);
         private static readonly Type ObserverContextType = typeof(ObserverContext<>);
-        private static readonly Type RequestObserverType = typeof(IRequestObserver<,>);
         private static readonly Type MessageObserverType = typeof(IMessageObserver<>);
-        private static readonly object LockGetObserver = new object();
-        private static readonly object LockInvoke = new object();
+        private static readonly object Lock = new object();
+        private readonly Dictionary<Type, Attributes> _attributes = new Dictionary<Type, Attributes>();
         private readonly Dictionary<Type, ContextMethod> _cache = new Dictionary<Type, ContextMethod>();
-
-        private readonly Dictionary<Type, Dictionary<int, object>> _observers =
-            new Dictionary<Type, Dictionary<int, object>>();
 
         private readonly IComponentResolver _resolver;
 
@@ -30,61 +28,7 @@ namespace Shuttle.Core.Mediator
             _resolver = resolver;
         }
 
-        public Task<TResponse> Request<TResponse>(object request,
-            CancellationToken cancellationToken = default)
-        {
-            Guard.AgainstNull(request, nameof(request));
-
-            var requestType = request.GetType();
-            var responseType = typeof(TResponse);
-            var interfaceType = RequestObserverType.MakeGenericType(requestType, responseType);
-            var observer = GetObserver(interfaceType);
-
-            try
-            {
-                var contextMethod = GetContextMethod(interfaceType, requestType);
-
-                return Task.Run(
-                    () => (TResponse) contextMethod.Method.Invoke(observer,
-                        new[] {Activator.CreateInstance(contextMethod.ContextType, request, cancellationToken)}),
-                    cancellationToken);
-            }
-            finally
-            {
-                if (observer is IReusability reusability && !reusability.IsReusable)
-                {
-                    ReleaseObserver(interfaceType);
-                }
-            }
-        }
-
         public Task Send(object message, CancellationToken cancellationToken = default)
-        {
-            Guard.AgainstNull(message, nameof(message));
-
-            var messageType = message.GetType();
-            var interfaceType = MessageObserverType.MakeGenericType(messageType);
-            var observer = GetObserver(messageType);
-
-            try
-            {
-                var contextMethod = GetContextMethod(interfaceType, messageType);
-
-                return Task.Run(
-                    () => contextMethod.Method.Invoke(observer,
-                        new[] {Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken)}),
-                    cancellationToken);
-            }
-            finally
-            {
-                if (observer is IReusability reusability && !reusability.IsReusable)
-                {
-                    ReleaseObserver(messageType);
-                }
-            }
-        }
-
-        public Task Publish(object message, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(message, nameof(message));
 
@@ -99,19 +43,78 @@ namespace Shuttle.Core.Mediator
 
             var contextMethod = GetContextMethod(interfaceType, messageType);
 
+            var parameters = new[]
+                {Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken)};
+
+            var invokes = new Dictionary<PipelineSequence, List<Action>>
+            {
+                {PipelineSequence.Before, new List<Action>()},
+                {PipelineSequence.Proper, new List<Action>()},
+                {PipelineSequence.After, new List<Action>()}
+            };
+
+            foreach (var observer in observers)
+            {
+                var type = observer.GetType();
+
+                RegisterAttributes(type);
+
+                var attributes = _attributes[type];
+
+                void Action() => contextMethod.Method.Invoke(observer, parameters);
+
+                if (attributes.HasBeforeAttribute)
+                {
+                    invokes[PipelineSequence.Before].Add(Action);
+                }
+
+                if (!attributes.HasBeforeAttribute && !attributes.HasAfterAttribute)
+                {
+                    invokes[PipelineSequence.Proper].Add(Action);
+                }
+
+                if (attributes.HasAfterAttribute)
+                {
+                    invokes[PipelineSequence.After].Add(Action);
+                }
+            }
+
             return Task.Run(() =>
             {
-                foreach (var observer in observers)
+                foreach (var action in invokes[PipelineSequence.Before])
                 {
-                    contextMethod.Method.Invoke(observer,
-                        new[] {Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken)});
+                    action();
+                }
+
+                foreach (var action in invokes[PipelineSequence.Proper])
+                {
+                    action();
+                }
+
+                foreach (var action in invokes[PipelineSequence.After])
+                {
+                    action();
                 }
             }, cancellationToken);
         }
 
+        private void RegisterAttributes(Type type)
+        {
+            if (_attributes.ContainsKey(type))
+            {
+                return;
+            }
+
+            _attributes.Add(type, new Attributes
+            {
+                HasAfterAttribute = Attribute.IsDefined(type, AfterObserverAttributeType),
+                HasBeforeAttribute = Attribute.IsDefined(type, BeforeObserverAttributeType)
+            });
+        }
+
         private ContextMethod GetContextMethod(Type type, Type messageType)
         {
-            lock (LockInvoke)
+            lock (Lock)
             {
                 if (!_cache.TryGetValue(type, out var contextMethod))
                 {
@@ -136,52 +139,23 @@ namespace Shuttle.Core.Mediator
             }
         }
 
-        private void ReleaseObserver(Type interfaceType)
-        {
-            lock (LockGetObserver)
-            {
-                if (!_observers.TryGetValue(interfaceType, out var instances))
-                {
-                    return;
-                }
-
-                instances.Remove(Thread.CurrentThread.ManagedThreadId);
-            }
-        }
-
-        private object GetObserver(Type interfaceType)
-        {
-            lock (LockGetObserver)
-            {
-                if (!_observers.TryGetValue(interfaceType, out var instances))
-                {
-                    instances = new Dictionary<int, object>();
-                    _observers.Add(interfaceType, instances);
-                }
-
-                var managedThreadId = Thread.CurrentThread.ManagedThreadId;
-
-                if (!instances.TryGetValue(managedThreadId, out var observer))
-                {
-                    observer = _resolver.Resolve(interfaceType);
-
-                    if (observer == null)
-                    {
-                        throw new InvalidOperationException(string.Format(Resources.MissingObserverException,
-                            interfaceType.FullName));
-                    }
-
-                    instances.Add(managedThreadId, observer);
-                }
-
-                return observer;
-            }
-        }
-
-        internal class ContextMethod
+        private class ContextMethod
         {
             public Type ContextType { get; set; }
             public MethodInfo Method { get; set; }
+        }
+
+        private class Attributes
+        {
+            public bool HasBeforeAttribute { get; set; }
+            public bool HasAfterAttribute { get; set; }
+        }
+
+        private enum PipelineSequence
+        {
+            Before,
+            Proper,
+            After
         }
     }
 }

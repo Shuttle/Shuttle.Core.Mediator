@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Shuttle.Core.Container;
 
@@ -9,10 +10,10 @@ namespace Shuttle.Core.Mediator.Tests
     public class MediatorFixture
     {
         [Test]
-        public void Should_be_able_to_send_a_message()
+        public void Should_be_able_to_send_a_message_to_a_single_observer()
         {
             var observer = new WriteMessageObserver();
-            var mediator = new Mediator(new DelegatedComponentResolver(type => observer, type => null));
+            var mediator = new Mediator(new DelegatedComponentResolver(type => null, type => new [] { observer }));
 
             mediator.Send(new WriteMessage {Text = "hello world!"}).Wait();
 
@@ -20,7 +21,7 @@ namespace Shuttle.Core.Mediator.Tests
         }
 
         [Test]
-        public void Should_be_able_publish_a_message()
+        public void Should_be_able_send_a_message_to_multiple_observers()
         {
             var observers = new List<IMessageObserver<MessageWritten>>
             {
@@ -29,7 +30,7 @@ namespace Shuttle.Core.Mediator.Tests
             };
             var mediator = new Mediator(new DelegatedComponentResolver(type => null, type => observers));
 
-            mediator.Publish(new MessageWritten { Text = "hello world!" }).Wait();
+            mediator.Send(new MessageWritten { Text = "hello world!" }).Wait();
 
             foreach (var observer in observers)
             {
@@ -38,16 +39,34 @@ namespace Shuttle.Core.Mediator.Tests
         }
 
         [Test]
-        public void Should_be_able_to_request_a_response()
+        public void Should_be_able_to_perform_pipeline_processing()
         {
-            var observer = new RequestObserver();
-            var mediator = new Mediator(new DelegatedComponentResolver(type => observer, type => null));
+            var observers = new List<IMessageObserver<RegisterMessage>>
+            {
+                new BeforeMessageObserver(),
+                new BeforeMessageObserver(),
+                new MessageObserver(),
+                new MessageObserver(),
+                new AfterMessageObserver(),
+                new AfterMessageObserver()
+            };
+            var mediator = new Mediator(new DelegatedComponentResolver(type => null, type => observers));
 
-            var response = mediator.Request<ResponseMessage>(new RequestMessage { RequestText = "hello world!" }).Result;
+            var message = new RegisterMessage();
 
-            Console.WriteLine($@"[response] : text = '{response.ResponseText}'");
+            mediator.Send(message).Wait();
 
-            Assert.That(observer.CallCount, Is.EqualTo(1));
+            Assert.That(message.Messages.Count(), Is.EqualTo(6));
+
+            foreach (var observer in observers)
+            {
+                Assert.That(((Observer)observer).CallCount, Is.EqualTo(1));
+            }
+
+            foreach (var text in message.Messages)
+            {
+                Console.WriteLine(text);
+            }
         }
     }
 }
