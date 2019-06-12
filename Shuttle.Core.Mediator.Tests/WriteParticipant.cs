@@ -3,9 +3,9 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator.Tests
 {
-    public class WriteMessageObserver : Observer, IMessageObserver<WriteMessage>
+    public class WriteParticipant : AbstractObserver, IParticipant<WriteMessage>
     {
-        public void ProcessMessage(IObserverContext<WriteMessage> context)
+        public void ProcessMessage(IParticipantContext<WriteMessage> context)
         {
             Guard.AgainstNull(context, nameof(context));
 

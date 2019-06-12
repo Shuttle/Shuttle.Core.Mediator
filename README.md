@@ -23,6 +23,6 @@ public interface IMessageObserver<in T>
 
 An observer would handle the message that is sent on using the mediator.
 
-There are not *request/response* semantics and the design philosophy here is that the message encapsulates the state that is passed along in a *pipes & filters* approach.
+There are no *request/response* semantics and the design philosophy here is that the message encapsulates the state that is passed along in a *pipes & filters* approach.
 
 There may be *N* observers of the message.  In addition observers may be marked with the `[BeforeObserverAttribute]` attribute if the observer runs before the observer proper that does the message handling.  An observer may also be marked with the `[AfterObserverAttribute]` in order to have the observer handle the message after the observer proper has completed the message handling.

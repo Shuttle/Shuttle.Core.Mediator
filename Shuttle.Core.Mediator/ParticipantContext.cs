@@ -3,9 +3,9 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator
 {
-    public class ObserverContext<TRequest> : IObserverContext<TRequest>
+    public class ParticipantContext<TRequest> : IParticipantContext<TRequest>
     {
-        public ObserverContext(TRequest message, CancellationToken cancellationToken)
+        public ParticipantContext(TRequest message, CancellationToken cancellationToken)
         {
             Guard.AgainstNull(message, nameof(message));
 

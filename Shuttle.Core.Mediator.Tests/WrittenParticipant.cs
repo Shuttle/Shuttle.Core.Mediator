@@ -3,11 +3,11 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator.Tests
 {
-    public class MessageWrittenObserver : Observer, IMessageObserver<MessageWritten>
+    public class WrittenParticipant : AbstractObserver, IParticipant<MessageWritten>
     {
         private readonly Guid _id = Guid.NewGuid();
 
-        public void ProcessMessage(IObserverContext<MessageWritten> context)
+        public void ProcessMessage(IParticipantContext<MessageWritten> context)
         {
             Guard.AgainstNull(context, nameof(context));
 

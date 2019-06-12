@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Shuttle.Core.Container" Version="11.0.0" />
+    <PackageReference Include="Shuttle.Core.Reflection" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>

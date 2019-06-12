@@ -70,6 +70,15 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Type &apos;{0}&apos; does not implement an `IObserver&lt;&gt;` interfrace..
+        /// </summary>
+        public static string ObserverInterfaceMissingException {
+            get {
+                return ResourceManager.GetString("ObserverInterfaceMissingException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type &apos;{0}&apos; does not have the required ProcessMessage method..
         /// </summary>
         public static string ProcessMessageMethodMissingException {
