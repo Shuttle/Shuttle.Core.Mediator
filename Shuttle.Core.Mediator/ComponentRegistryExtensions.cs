@@ -32,8 +32,8 @@ namespace Shuttle.Core.Mediator
             var reflectionService = new ReflectionService();
             var participantType = typeof(IParticipant<>);
 
-            registry.Register(assembly, type => type.IsAssignableTo(participantType), type => participantType,
-                type => Lifestyle.Singleton);
+            registry.RegisterCollection(participantType,
+                reflectionService.GetTypesAssignableTo(participantType, assembly), Lifestyle.Singleton);
         }
     }
 }
