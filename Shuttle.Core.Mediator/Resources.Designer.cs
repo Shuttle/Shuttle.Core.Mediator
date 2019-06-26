@@ -61,20 +61,20 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not find an observer for type &apos;{0}&apos;..
+        ///   Looks up a localized string similar to Could not find a participant for type &apos;{0}&apos;..
         /// </summary>
-        public static string MissingObserverException {
+        public static string MissingParticipantException {
             get {
-                return ResourceManager.GetString("MissingObserverException", resourceCulture);
+                return ResourceManager.GetString("MissingParticipantException", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Type &apos;{0}&apos; does not implement an `IObserver&lt;&gt;` interfrace..
+        ///   Looks up a localized string similar to Type &apos;{0}&apos; does not implement an `IParticipant&lt;&gt;` interfrace..
         /// </summary>
-        public static string ObserverInterfaceMissingException {
+        public static string ParticipantInterfaceMissingException {
             get {
-                return ResourceManager.GetString("ObserverInterfaceMissingException", resourceCulture);
+                return ResourceManager.GetString("ParticipantInterfaceMissingException", resourceCulture);
             }
         }
         

@@ -37,7 +37,7 @@ namespace Shuttle.Core.Mediator
 
             if (!type.IsAssignableTo(ObserverType))
             {
-                throw new InvalidOperationException(string.Format(Resources.ObserverInterfaceMissingException, type.FullName));
+                throw new InvalidOperationException(string.Format(Resources.ParticipantInterfaceMissingException, type.FullName));
             }
 
             lock (_lock)
@@ -70,7 +70,7 @@ namespace Shuttle.Core.Mediator
 
             if (!_participants.ContainsKey(interfaceType))
             {
-                return;
+                throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
             }
 
             var contextMethod = GetContextMethod(interfaceType, messageType);
@@ -82,6 +82,11 @@ namespace Shuttle.Core.Mediator
             foreach (var participant in participants.Get(FilterSequence.Before))
             {
                 contextMethod.Method.Invoke(participant, parameters);
+            }
+
+            if (!participants.Get(FilterSequence.Actual).Any())
+            {
+                throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
             }
 
             foreach (var participant in participants.Get(FilterSequence.Actual))

@@ -117,12 +117,12 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="MissingObserverException" xml:space="preserve">
-    <value>Could not find an observer for type '{0}'.</value>
+  <data name="MissingParticipantException" xml:space="preserve">
+    <value>Could not find a participant for type '{0}'.</value>
     <comment>0 = full name of the observer type</comment>
   </data>
-  <data name="ObserverInterfaceMissingException" xml:space="preserve">
-    <value>Type '{0}' does not implement an `IObserver&lt;&gt;` interfrace.</value>
+  <data name="ParticipantInterfaceMissingException" xml:space="preserve">
+    <value>Type '{0}' does not implement an `IParticipant&lt;&gt;` interfrace.</value>
     <comment>0 = full name of the observer type</comment>
   </data>
   <data name="ProcessMessageMethodMissingException" xml:space="preserve">
