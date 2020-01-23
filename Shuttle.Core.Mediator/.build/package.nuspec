@@ -1,22 +1,26 @@
 <?xml version="1.0"?>
-<package >
-	<metadata>
-		<id>Shuttle.Core.Mediator</id>
-		<version>{semver}</version>
-		<authors>Eben Roux</authors>
-		<owners>Eben Roux</owners>
+<package>
+  <metadata>
+    <id>Shuttle.Core.Mediator</id>
+    <version>{semver}</version>
+    <authors>Eben Roux</authors>
+    <owners>Eben Roux</owners>
     <license type="expression">BSD-3-Clause</license>
-		<projectUrl>https://github.com/shuttle/Shuttle.Core.Mediator</projectUrl>
-		<iconUrl>https://raw.githubusercontent.com/Shuttle/Shuttle.Core.Mediator/master/.media/logo.png</iconUrl>
+    <projectUrl>https://github.com/shuttle/Shuttle.Core.Mediator</projectUrl>
+    <icon>images\logo.png</icon>
     <repository type="git" url="https://github.com/Shuttle/Shuttle.Core.Mediator.git" />
-		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<description>Generic implementation of the mediator mechanism.</description>
-		<releaseNotes/>
-		<copyright>Copyright (c) {year}, Eben Roux</copyright>
-		<tags>shuttle mediator mediatr</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Generic implementation of the mediator mechanism.</description>
+    <releaseNotes />
+    <copyright>Copyright (c) {year}, Eben Roux</copyright>
+    <tags>shuttle mediator mediatr</tags>
     <dependencies>
       <dependency id="Shuttle.Core.Container" version="{Shuttle.Core.Container-version}" />
       <dependency id="Shuttle.Core.Reflection" version="{Shuttle.Core.Reflection-version}" />
     </dependencies>
-	</metadata>
+  </metadata>
+  <files>
+    <file src="..\..\..\..\.media\logo.png" target="images\" />
+	<file src="lib\**\*.*" target="lib" />
+  </files>
 </package>
