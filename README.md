@@ -59,11 +59,21 @@ public interface IParticipant<in T>
 }
 ```
 
-A participant would handle the message that is sent on using the mediator.
+A participant would handle the message that is sent using the mediator.  There may be any number of participants that process the message. 
+
+# Design philosophy
 
 There are no *request/response* semantics and the design philosophy here is that the message encapsulates the state that is passed along in a *pipes & filters* approach.
 
-There may be any number of participants that process the message. 
+However, you may wish to make use of one of the existing utility classes:-
+
+## RequestMessage<TRequest>
+
+The only expectation from a `RequestMessage<TRequest>` instance is either a success or failure (along with the failure message).
+
+## RequestResponseMessage<TRequest, TResponse>
+
+The `RequestResponseMessage<TRequest, TResponse>` takes an initial `TRequest` object and after the mediator processing would expect that there be a `TResponse` provided using the `.WithResponse(TResponse)` method.  The same success/failure mechanism used in the `RequestMessage<TRequest>` calss is also available on this class.
 
 # Considerations
 
