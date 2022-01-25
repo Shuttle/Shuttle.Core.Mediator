@@ -15,7 +15,7 @@ namespace Shuttle.Core.Mediator
         private static readonly Type ObserverContextType = typeof(ParticipantContext<>);
         private static readonly Type ObserverType = typeof(IParticipant<>);
 
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
         private readonly Dictionary<Type, ContextMethod> _cache = new Dictionary<Type, ContextMethod>();
         private readonly Dictionary<Type, Participants> _participants = new Dictionary<Type, Participants>();
 
