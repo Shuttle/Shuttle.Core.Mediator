@@ -7,6 +7,13 @@ namespace Shuttle.Core.Mediator
 {
     public static class ComponentRegistryExtensions
     {
+        public static void RegisterMediator(this IComponentRegistry registry)
+        {
+            Guard.AgainstNull(registry, nameof(registry));
+
+            registry.AttemptRegister<IMediator, Mediator>();
+        }
+
         /// <summary>
         ///     Registers all types that implement the `IParticipant<T>` interface against the open generic type `IParticipant<>`.
         /// </summary>
