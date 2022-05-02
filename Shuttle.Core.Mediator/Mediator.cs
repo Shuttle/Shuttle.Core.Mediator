@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using Shuttle.Core.Container;
 using Shuttle.Core.Contract;
-using Shuttle.Core.Reflection;
 
 namespace Shuttle.Core.Mediator
 {
@@ -12,53 +12,19 @@ namespace Shuttle.Core.Mediator
     {
         private static readonly Type BeforeParticipantAttributeType = typeof(BeforeObserverAttribute);
         private static readonly Type AfterParticipantAttributeType = typeof(AfterObserverAttribute);
-        private static readonly Type ObserverContextType = typeof(ParticipantContext<>);
-        private static readonly Type ObserverType = typeof(IParticipant<>);
+        private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
+        private static readonly Type ParticipantType = typeof(IParticipant<>);
 
-        private readonly object _lock = new();
-        private readonly Dictionary<Type, ContextMethod> _cache = new Dictionary<Type, ContextMethod>();
-        private readonly Dictionary<Type, Participants> _participants = new Dictionary<Type, Participants>();
+        private static readonly object Lock = new();
+        private readonly Dictionary<Type, ContextMethod> _cache = new();
+        private readonly Dictionary<Type, Participants> _participants = new();
+        private readonly IComponentResolver _resolver;
 
-        public IMediator Add(object participant)
+        public Mediator(IComponentResolver resolver)
         {
-            Guard.AgainstNull(participant, nameof(participant));
+            Guard.AgainstNull(resolver, nameof(resolver));
 
-            if (participant is IEnumerable<object> enumerable)
-            {
-                foreach (var o in enumerable)
-                {
-                    Add(o);
-                }
-
-                return this;
-            }
-
-            var type = participant.GetType();
-
-            if (!type.IsAssignableTo(ObserverType))
-            {
-                throw new InvalidOperationException(string.Format(Resources.ParticipantInterfaceMissingException, type.FullName));
-            }
-
-            lock (_lock)
-            {
-                foreach (var interfaceType in type.GetInterfaces())
-                {
-                    if (!interfaceType.IsAssignableTo(ObserverType))
-                    {
-                        continue;
-                    }
-
-                    if (!_participants.ContainsKey(interfaceType))
-                    {
-                        _participants.Add(interfaceType, new Participants());
-                    }
-
-                    _participants[interfaceType].Add(participant);
-                }
-            }
-
-            return this;
+            _resolver = resolver;
         }
 
         public void Send(object message, CancellationToken cancellationToken = default)
@@ -66,16 +32,19 @@ namespace Shuttle.Core.Mediator
             Guard.AgainstNull(message, nameof(message));
 
             var messageType = message.GetType();
-            var interfaceType = ObserverType.MakeGenericType(messageType);
+            var interfaceType = ParticipantType.MakeGenericType(messageType);
 
             if (!_participants.ContainsKey(interfaceType))
             {
-                throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
+                lock (Lock)
+                {
+                    _participants.Add(interfaceType, new Participants(_resolver.ResolveAll(interfaceType)));
+                }
             }
 
             var contextMethod = GetContextMethod(interfaceType, messageType);
             var parameters = new[]
-                {Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken)};
+                { Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken) };
 
             var participants = _participants[interfaceType];
 
@@ -102,7 +71,7 @@ namespace Shuttle.Core.Mediator
 
         private ContextMethod GetContextMethod(Type type, Type messageType)
         {
-            lock (_lock)
+            lock (Lock)
             {
                 if (!_cache.TryGetValue(type, out var contextMethod))
                 {
@@ -116,7 +85,7 @@ namespace Shuttle.Core.Mediator
 
                     contextMethod = new ContextMethod
                     {
-                        ContextType = ObserverContextType.MakeGenericType(messageType),
+                        ContextType = ParticipantContextType.MakeGenericType(messageType),
                         Method = method
                     };
 
@@ -142,9 +111,19 @@ namespace Shuttle.Core.Mediator
 
         private class Participants
         {
-            private readonly List<object> _before = new List<object>();
-            private readonly List<object> _actual = new List<object>();
-            private readonly List<object> _after = new List<object>();
+            private readonly List<object> _actual = new();
+            private readonly List<object> _after = new();
+            private readonly List<object> _before = new();
+
+            public Participants(IEnumerable<object> participants)
+            {
+                Guard.AgainstNull(participants, nameof(participants));
+
+                foreach (var participant in participants)
+                {
+                    Add(participant);
+                }
+            }
 
             public IEnumerable<object> Get(FilterSequence sequence)
             {
@@ -167,6 +146,11 @@ namespace Shuttle.Core.Mediator
 
             public void Add(object participant)
             {
+                if (participant == null)
+                {
+                    return;
+                }
+
                 var type = participant.GetType();
 
                 var hasBefore = Attribute.IsDefined(type, BeforeParticipantAttributeType);

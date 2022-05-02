@@ -14,6 +14,7 @@
     <releaseNotes />
     <copyright>Copyright (c) {year}, Eben Roux</copyright>
     <tags>shuttle mediator mediatr</tags>
+    <readme>docs\README.md</readme>
     <dependencies>
       <dependency id="Shuttle.Core.Container" version="{Shuttle.Core.Container-version}" />
       <dependency id="Shuttle.Core.Reflection" version="{Shuttle.Core.Reflection-version}" />
@@ -21,6 +22,7 @@
   </metadata>
   <files>
     <file src="..\..\..\..\.media\logo.png" target="images\" />
+    <file src="..\..\..\..\README.md" target="docs\" />
 	<file src="lib\**\*.*" target="lib" />
   </files>
 </package>

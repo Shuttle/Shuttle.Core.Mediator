@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Moq;
 using NUnit.Framework;
+using Shuttle.Core.Container;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -9,38 +11,48 @@ namespace Shuttle.Core.Mediator.Tests
     public class MediatorFixture
     {
         [Test]
-        public void Should_be_able_to_send_a_message_to_a_single_observer()
+        public void Should_be_able_to_send_a_message_to_a_single_participant()
         {
-            var observer = new WriteParticipant();
-            var mediator = new Mediator().Add(observer);
+            var resolver = new Mock<IComponentResolver>();
+            var participant = new WriteParticipant();
 
-            mediator.Send(new WriteMessage {Text = "hello world!"});
+            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<WriteMessage>)))
+                .Returns(new List<IParticipant<WriteMessage>> { participant });
 
-            Assert.That(observer.CallCount, Is.EqualTo(1));
+            var mediator = new Mediator(resolver.Object);
+
+            mediator.Send(new WriteMessage { Text = "hello world!" });
+
+            Assert.That(participant.CallCount, Is.EqualTo(1));
         }
 
         [Test]
-        public void Should_be_able_send_a_message_to_multiple_observers()
+        public void Should_be_able_send_a_message_to_multiple_participants()
         {
+            var resolver = new Mock<IComponentResolver>();
             var observers = new List<IParticipant<MessageWritten>>
             {
-                new WrittenParticipant(),
-                new WrittenParticipant()
+                new WrittenParticipantA(),
+                new WrittenParticipantB()
             };
 
-            var mediator = new Mediator().Add(observers);
+            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<MessageWritten>)))
+                .Returns(observers);
 
-            mediator.Send(new MessageWritten { Text = "hello world!" });
+            var mediator = new Mediator(resolver.Object);
+
+            mediator.Send(new MessageWritten { Text = "hello participants!" });
 
             foreach (var observer in observers)
             {
-                Assert.That(((WrittenParticipant)observer).CallCount, Is.EqualTo(1));
+                Assert.That(((AbstractObserver)observer).CallCount, Is.EqualTo(1));
             }
         }
 
         [Test]
         public void Should_be_able_to_perform_pipeline_processing()
         {
+            var resolver = new Mock<IComponentResolver>();
             var beforeA = new BeforeRegisterParticipant();
             var beforeB = new BeforeRegisterParticipant();
             var registerA = new RegisterParticipant();
@@ -58,7 +70,10 @@ namespace Shuttle.Core.Mediator.Tests
                 afterB
             };
 
-            var mediator = new Mediator().Add(observers);
+            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<RegisterMessage>)))
+                .Returns(observers);
+
+            var mediator = new Mediator(resolver.Object);
             var message = new RegisterMessage();
 
             mediator.Send(message);
