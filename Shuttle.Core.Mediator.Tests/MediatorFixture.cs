@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Moq;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Shuttle.Core.Container;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -13,46 +12,49 @@ namespace Shuttle.Core.Mediator.Tests
         [Test]
         public void Should_be_able_to_send_a_message_to_a_single_participant()
         {
-            var resolver = new Mock<IComponentResolver>();
-            var participant = new WriteParticipant();
+            var services = new ServiceCollection();
 
-            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<WriteMessage>)))
-                .Returns(new List<IParticipant<WriteMessage>> { participant });
+            services.AddMediator(options =>
+            {
+                options.AddParticipant<WriteParticipant>();
+            });
 
-            var mediator = new Mediator(resolver.Object);
+            var provider = services.BuildServiceProvider();
+            var mediator = provider.GetRequiredService<IMediator>();
 
             mediator.Send(new WriteMessage { Text = "hello world!" });
 
-            Assert.That(participant.CallCount, Is.EqualTo(1));
+            Assert.That(((AbstractParticipant)provider.GetRequiredService<IParticipant<WriteMessage>>()).CallCount,
+                Is.EqualTo(1));
         }
 
         [Test]
         public void Should_be_able_send_a_message_to_multiple_participants()
         {
-            var resolver = new Mock<IComponentResolver>();
-            var observers = new List<IParticipant<MessageWritten>>
+            var services = new ServiceCollection();
+
+            services.AddMediator(options =>
             {
-                new WrittenParticipantA(),
-                new WrittenParticipantB()
-            };
+                options.AddParticipant<WrittenParticipantA>();
+                options.AddParticipant<WrittenParticipantB>();
+            });
 
-            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<MessageWritten>)))
-                .Returns(observers);
-
-            var mediator = new Mediator(resolver.Object);
+            var provider = services.BuildServiceProvider();
+            var mediator = new Mediator(provider);
 
             mediator.Send(new MessageWritten { Text = "hello participants!" });
 
-            foreach (var observer in observers)
+            foreach (var participant in provider.GetServices<IParticipant<MessageWritten>>())
             {
-                Assert.That(((AbstractObserver)observer).CallCount, Is.EqualTo(1));
+                Assert.That(((AbstractParticipant)participant).CallCount, Is.EqualTo(1));
             }
         }
 
         [Test]
         public void Should_be_able_to_perform_pipeline_processing()
         {
-            var resolver = new Mock<IComponentResolver>();
+            var services = new ServiceCollection();
+
             var beforeA = new BeforeRegisterParticipant();
             var beforeB = new BeforeRegisterParticipant();
             var registerA = new RegisterParticipant();
@@ -60,7 +62,7 @@ namespace Shuttle.Core.Mediator.Tests
             var afterA = new AfterRegisterParticipant();
             var afterB = new AfterRegisterParticipant();
 
-            var observers = new List<IParticipant<RegisterMessage>>
+            var participants = new List<IParticipant<RegisterMessage>>
             {
                 beforeA,
                 beforeB,
@@ -70,19 +72,25 @@ namespace Shuttle.Core.Mediator.Tests
                 afterB
             };
 
-            resolver.Setup(m => m.ResolveAll(typeof(IParticipant<RegisterMessage>)))
-                .Returns(observers);
+            services.AddMediator(options =>
+            {
+                foreach (var participant in participants)
+                {
+                    options.AddParticipant(participant);
+                }
+            });
 
-            var mediator = new Mediator(resolver.Object);
+            var provider = services.BuildServiceProvider();
+            var mediator = new Mediator(provider);
             var message = new RegisterMessage();
 
             mediator.Send(message);
 
             Assert.That(message.Messages.Count(), Is.EqualTo(6));
 
-            foreach (var observer in observers)
+            foreach (var observer in participants)
             {
-                Assert.That(((AbstractObserver)observer).CallCount, Is.EqualTo(1));
+                Assert.That(((AbstractParticipant)observer).CallCount, Is.EqualTo(1));
             }
 
             Assert.That(beforeB.WhenCalled, Is.GreaterThan(beforeA.WhenCalled));

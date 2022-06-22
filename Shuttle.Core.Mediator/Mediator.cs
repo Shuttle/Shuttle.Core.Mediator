@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using Shuttle.Core.Container;
+using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator
@@ -18,13 +18,13 @@ namespace Shuttle.Core.Mediator
         private static readonly object Lock = new();
         private readonly Dictionary<Type, ContextMethod> _cache = new();
         private readonly Dictionary<Type, Participants> _participants = new();
-        private readonly IComponentResolver _resolver;
+        private readonly IServiceProvider _provider;
 
-        public Mediator(IComponentResolver resolver)
+        public Mediator(IServiceProvider provider)
         {
-            Guard.AgainstNull(resolver, nameof(resolver));
+            Guard.AgainstNull(provider, nameof(provider));
 
-            _resolver = resolver;
+            _provider = provider;
         }
 
         public void Send(object message, CancellationToken cancellationToken = default)
@@ -38,7 +38,7 @@ namespace Shuttle.Core.Mediator
             {
                 lock (Lock)
                 {
-                    _participants.Add(interfaceType, new Participants(_resolver.ResolveAll(interfaceType)));
+                    _participants.Add(interfaceType, new Participants(_provider.GetServices(interfaceType)));
                 }
             }
 
