@@ -6,6 +6,22 @@ PM> Install-Package Shuttle.Core.Mediator
 
 The Shuttle.Core.Mediator package provides a [mediator pattern](https://en.wikipedia.org/wiki/Mediator_pattern) implementation.
 
+## Configuration
+
+In order to get all the relevant bits working you would need to register the `IMediator` dependency along with all the relevant `IParticipant` dependencies.
+
+You can register the mediator using `IServiceCollection`:
+
+```c#
+services.AddMediator(options =>
+{
+    options.AddParticipants(assembly);
+    options.AddParticipant<Participant>();
+    options.AddParticipant(participantType)
+    options.AddParticipant<Message>(participant)
+});
+```
+
 ## IMediator
 
 The core interface is the `IMediator` interface and the default implementation provided is the `Mediator` class.
@@ -61,18 +77,6 @@ The only expectation from a `RequestMessage<TRequest>` instance is either a succ
 ### RequestResponseMessage\<TRequest, TResponse\>
 
 The `RequestResponseMessage<TRequest, TResponse>` takes an initial `TRequest` object and after the mediator processing would expect that there be a `TResponse` provided using the `.WithResponse(TResponse)` method.  The same success/failure mechanism used in the `RequestMessage<TRequest>` calss is also available on this class.
-
-## Registration
-
-In order to get all the relevant bits working you would need to register the `IMediator` dependency along with all the relevant `IParticipant` dependencies.
-
-You can register the mediator using `ComponentRegistryExtensions.RegisterMediator(IComponentRegistry)`.
-
-The participants may be registered using the following `ComponentRegistryExtensions` methods:
-
-```c#
-public static void RegisterMediatorParticipants(this IComponentRegistry registry, Assembly assembly);
-```
 
 ## Considerations
 
