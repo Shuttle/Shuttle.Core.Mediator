@@ -3,7 +3,7 @@
 <package>
 	<metadata>
 		<id>Shuttle.Core.Mediator</id>
-		<version>#{SemanticVersion}#</version>
+		<version>13.0.0</version>
 		<authors>Eben Roux</authors>
 		<owners>Eben Roux</owners>
 		<license type="expression">BSD-3-Clause</license>
@@ -13,10 +13,12 @@
 		<repository type="git" url="https://github.com/Shuttle/Shuttle.Core.Mediator.git" />
 		<projectUrl>https://github.com/shuttle/Shuttle.Core.Mediator</projectUrl>
 		<description>Mediator pattern implementation.</description>
-		<copyright>Copyright (c) #{Year}#, Eben Roux</copyright>
+		<copyright>Copyright (c) 2022, Eben Roux</copyright>
 		<tags>shuttle mediator mediatr</tags>
 		<dependencies>
-#{Dependencies}#
+      <dependency id="Microsoft.Extensions.DependencyInjection" version="6.0.0" />
+      <dependency id="Microsoft.Extensions.Options" version="6.0.0" />
+      <dependency id="Shuttle.Core.Reflection" version="11.0.3" />
 		</dependencies>
 	</metadata>
 	<files>

@@ -5,63 +5,64 @@ using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
-namespace Shuttle.Core.Mediator;
-
-public class MediatorOptions
+namespace Shuttle.Core.Mediator
 {
-    private readonly Type _participantType = typeof(IParticipant<>);
-    private readonly IServiceCollection _services;
-
-    public MediatorOptions(IServiceCollection services)
+    public class MediatorOptions
     {
-        Guard.AgainstNull(services, nameof(services));
+        private readonly Type _participantType = typeof(IParticipant<>);
+        private readonly IServiceCollection _services;
 
-        _services = services;
-    }
-
-    public MediatorOptions AddParticipants(Assembly assembly)
-    {
-        Guard.AgainstNull(assembly, nameof(assembly));
-
-        var reflectionService = new ReflectionService();
-
-        var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly);
-
-        foreach (var grouping in implementationTypes.GroupBy(item =>
-                     item.GetInterface(_participantType.Name).GetGenericArguments().First()))
+        public MediatorOptions(IServiceCollection services)
         {
-            _services.AddSingleton(_participantType.MakeGenericType(grouping.Key), grouping);
+            Guard.AgainstNull(services, nameof(services));
+
+            _services = services;
         }
 
-        return this;
-    }
-
-    public MediatorOptions AddParticipant<TParticipant>()
-    {
-        AddParticipant(typeof(TParticipant));
-
-        return this;
-    }
-
-    public MediatorOptions AddParticipant(Type participantType)
-    {
-        if (!participantType.IsAssignableTo(_participantType))
+        public MediatorOptions AddParticipants(Assembly assembly)
         {
-            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException,
-                participantType.Name));
+            Guard.AgainstNull(assembly, nameof(assembly));
+
+            var reflectionService = new ReflectionService();
+
+            var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly);
+
+            foreach (var grouping in implementationTypes.GroupBy(item =>
+                         item.GetInterface(_participantType.Name).GetGenericArguments().First()))
+            {
+                _services.AddSingleton(_participantType.MakeGenericType(grouping.Key), grouping);
+            }
+
+            return this;
         }
 
-        _services.AddSingleton(
-            _participantType.MakeGenericType(participantType.GetInterface(_participantType.Name)
-                .GetGenericArguments().First()), participantType);
+        public MediatorOptions AddParticipant<TParticipant>()
+        {
+            AddParticipant(typeof(TParticipant));
 
-        return this;
-    }
+            return this;
+        }
 
-    public MediatorOptions AddParticipant<TMessage>(IParticipant<TMessage> participant)
-    {
-        _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), participant);
+        public MediatorOptions AddParticipant(Type participantType)
+        {
+            if (!participantType.IsAssignableTo(_participantType))
+            {
+                throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException,
+                    participantType.Name));
+            }
 
-        return this;
+            _services.AddSingleton(
+                _participantType.MakeGenericType(participantType.GetInterface(_participantType.Name)
+                    .GetGenericArguments().First()), participantType);
+
+            return this;
+        }
+
+        public MediatorOptions AddParticipant<TMessage>(IParticipant<TMessage> participant)
+        {
+            _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), participant);
+
+            return this;
+        }
     }
 }
