@@ -130,7 +130,7 @@
     <comment>0 = full name of participant type</comment>
   </data>
   <data name="ProcessMessageMethodMissingException" xml:space="preserve">
-    <value>Type '{0}' does not have the required ProcessMessage method.</value>
-    <comment>0 = full name of participant type</comment>
+    <value>Type '{0}' does not have the required ProcessMessage method for message type '{1}'.</value>
+    <comment>0 = full name of participant type, 1 = message type</comment>
   </data>
 </root>

@@ -7,19 +7,20 @@ using Shuttle.Core.Reflection;
 
 namespace Shuttle.Core.Mediator
 {
-    public class MediatorOptions
+    public class MediatorBuilder
     {
         private readonly Type _participantType = typeof(IParticipant<>);
+        private readonly Type[] _participantTypeCollection = { typeof(IParticipant<>) };
         private readonly IServiceCollection _services;
 
-        public MediatorOptions(IServiceCollection services)
+        public MediatorBuilder(IServiceCollection services)
         {
             Guard.AgainstNull(services, nameof(services));
 
             _services = services;
         }
 
-        public MediatorOptions AddParticipants(Assembly assembly)
+        public MediatorBuilder AddParticipants(Assembly assembly)
         {
             Guard.AgainstNull(assembly, nameof(assembly));
 
@@ -27,23 +28,32 @@ namespace Shuttle.Core.Mediator
 
             var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly);
 
-            foreach (var grouping in implementationTypes.GroupBy(item =>
-                         item.GetInterface(_participantType.Name).GetGenericArguments().First()))
+            foreach (var type in implementationTypes)
             {
-                _services.AddSingleton(_participantType.MakeGenericType(grouping.Key), grouping);
+                var interfaces = type.GetInterfaces();
+
+                foreach (var @interface in interfaces)
+                {
+                    if (@interface.Name != _participantType.Name)
+                    {
+                        continue;
+                    }
+
+                    _services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
+                }
             }
 
             return this;
         }
 
-        public MediatorOptions AddParticipant<TParticipant>()
+        public MediatorBuilder AddParticipant<TParticipant>()
         {
             AddParticipant(typeof(TParticipant));
 
             return this;
         }
 
-        public MediatorOptions AddParticipant(Type participantType)
+        public MediatorBuilder AddParticipant(Type participantType)
         {
             if (!participantType.IsAssignableTo(_participantType))
             {
@@ -58,7 +68,7 @@ namespace Shuttle.Core.Mediator
             return this;
         }
 
-        public MediatorOptions AddParticipant<TMessage>(IParticipant<TMessage> participant)
+        public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
         {
             _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), participant);
 

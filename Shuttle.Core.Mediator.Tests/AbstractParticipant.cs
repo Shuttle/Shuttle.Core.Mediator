@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -18,8 +17,6 @@ namespace Shuttle.Core.Mediator.Tests
         {
             CallCount++;
             WhenCalled = DateTime.Now;
-
-            Thread.Sleep(1);
         }
     }
 }

@@ -88,7 +88,7 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Type &apos;{0}&apos; does not have the required ProcessMessage method..
+        ///   Looks up a localized string similar to Type &apos;{0}&apos; does not have the required ProcessMessage method for message type &apos;{1}&apos;..
         /// </summary>
         public static string ProcessMessageMethodMissingException {
             get {

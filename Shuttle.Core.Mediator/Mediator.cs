@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
@@ -14,9 +15,10 @@ namespace Shuttle.Core.Mediator
         private static readonly Type AfterParticipantAttributeType = typeof(AfterObserverAttribute);
         private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
         private static readonly Type ParticipantType = typeof(IParticipant<>);
+        private readonly Dictionary<string, ContextMethodInvoker> _methodCache = new Dictionary<string, ContextMethodInvoker>();
+        private readonly Dictionary<Type, ContextConstructorInvoker> _constructorCache = new Dictionary<Type, ContextConstructorInvoker>();
 
         private static readonly object Lock = new();
-        private readonly Dictionary<Type, ContextMethod> _cache = new();
         private readonly Dictionary<Type, Participants> _participants = new();
         private readonly IServiceProvider _provider;
 
@@ -42,64 +44,73 @@ namespace Shuttle.Core.Mediator
                 }
             }
 
-            var contextMethod = GetContextMethod(interfaceType, messageType);
-            var parameters = new[]
-                { Activator.CreateInstance(contextMethod.ContextType, message, cancellationToken) };
-
             var participants = _participants[interfaceType];
-
-            foreach (var participant in participants.Get(FilterSequence.Before))
-            {
-                contextMethod.Method.Invoke(participant, parameters);
-            }
 
             if (!participants.Get(FilterSequence.Actual).Any())
             {
                 throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
             }
 
+            ContextConstructorInvoker contextConstructor;
+
+            lock (Lock)
+            {
+                if (!_constructorCache.TryGetValue(messageType, out contextConstructor))
+                {
+                    contextConstructor = new ContextConstructorInvoker(messageType);
+
+                    _constructorCache.Add(messageType, contextConstructor);
+                }
+            }
+
+            var participantContext = contextConstructor.CreateParticipantContext(message, cancellationToken);
+
+            foreach (var participant in participants.Get(FilterSequence.Before))
+            {
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+            }
+
             foreach (var participant in participants.Get(FilterSequence.Actual))
             {
-                contextMethod.Method.Invoke(participant, parameters);
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
 
             foreach (var participant in participants.Get(FilterSequence.After))
             {
-                contextMethod.Method.Invoke(participant, parameters);
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
         }
 
-        private ContextMethod GetContextMethod(Type type, Type messageType)
+        private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
         {
             lock (Lock)
             {
-                if (!_cache.TryGetValue(type, out var contextMethod))
+                var key = $"{participantType.Name}:{messageType.Name}";
+
+                if (!_methodCache.TryGetValue(key, out var contextMethod))
                 {
-                    var method = type.GetMethods().SingleOrDefault();
+                    var method = participantType.GetInterfaceMap(interfaceType)
+                        .TargetMethods.SingleOrDefault();
 
                     if (method == null)
                     {
-                        throw new InvalidOperationException(
-                            string.Format(Resources.ProcessMessageMethodMissingException, type.FullName));
+                        throw new InvalidOperationException(string.Format(
+                            Resources.ProcessMessageMethodMissingException,
+                            participantType.FullName,
+                            messageType.FullName));
                     }
 
-                    contextMethod = new ContextMethod
-                    {
-                        ContextType = ParticipantContextType.MakeGenericType(messageType),
-                        Method = method
-                    };
+                    contextMethod = new ContextMethodInvoker(
+                        participantType
+                            .GetInterfaceMap(ParticipantType.MakeGenericType(messageType))
+                            .TargetMethods.SingleOrDefault()
+                    );
 
-                    _cache.Add(type, contextMethod);
+                    _methodCache.Add(key, contextMethod);
                 }
 
                 return contextMethod;
             }
-        }
-
-        private class ContextMethod
-        {
-            public Type ContextType { get; set; }
-            public MethodInfo Method { get; set; }
         }
 
         private enum FilterSequence
@@ -172,5 +183,76 @@ namespace Shuttle.Core.Mediator
                 }
             }
         }
+    }
+
+    internal class ContextConstructorInvoker
+    {
+        private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
+
+        private readonly ConstructorInvokeHandler _constructorInvoker;
+
+        public ContextConstructorInvoker(Type messageType)
+        {
+            var dynamicMethod = new DynamicMethod(string.Empty, typeof(object),
+                new[]
+                {
+                    typeof(object),
+                    typeof(CancellationToken)
+                }, ParticipantContextType.Module);
+
+            var il = dynamicMethod.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+
+            var contextType = ParticipantContextType.MakeGenericType(messageType);
+            var constructorInfo = contextType.GetConstructor(new[]
+            {
+                messageType,
+                typeof(CancellationToken)
+            });
+
+            il.Emit(OpCodes.Newobj, constructorInfo);
+            il.Emit(OpCodes.Ret);
+
+            _constructorInvoker =
+                (ConstructorInvokeHandler)dynamicMethod.CreateDelegate(typeof(ConstructorInvokeHandler));
+        }
+
+        public object CreateParticipantContext(object message, CancellationToken cancellationToken)
+        {
+            return _constructorInvoker(message, cancellationToken);
+        }
+
+        private delegate object ConstructorInvokeHandler(object message, CancellationToken cancellationToken);
+    }
+
+    internal class ContextMethodInvoker
+    {
+        private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
+
+        private readonly InvokeHandler _invoker;
+
+        public ContextMethodInvoker(MethodInfo methodInfo)
+        {
+            var dynamicMethod = new DynamicMethod(string.Empty,
+                typeof(void), new[] { typeof(object), typeof(object) },
+                ParticipantContextType.Module);
+
+            var il = dynamicMethod.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+
+            il.EmitCall(OpCodes.Callvirt, methodInfo, null);
+            il.Emit(OpCodes.Ret);
+
+            _invoker = (InvokeHandler)dynamicMethod.CreateDelegate(typeof(InvokeHandler));
+        }
+
+        public void Invoke(object participant, object participantContext)
+        {
+            _invoker.Invoke(participant, participantContext);
+        }
+
+        private delegate void InvokeHandler(object handler, object handlerContext);
     }
 }
