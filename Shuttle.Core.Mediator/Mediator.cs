@@ -11,9 +11,8 @@ namespace Shuttle.Core.Mediator
 {
     public class Mediator : IMediator
     {
-        private static readonly Type BeforeParticipantAttributeType = typeof(BeforeObserverAttribute);
-        private static readonly Type AfterParticipantAttributeType = typeof(AfterObserverAttribute);
-        private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
+        private static readonly Type BeforeParticipantAttributeType = typeof(BeforeParticipantAttribute);
+        private static readonly Type AfterParticipantAttributeType = typeof(AfterParticipantAttribute);
         private static readonly Type ParticipantType = typeof(IParticipant<>);
         private readonly Dictionary<string, ContextMethodInvoker> _methodCache = new Dictionary<string, ContextMethodInvoker>();
         private readonly Dictionary<Type, ContextConstructorInvoker> _constructorCache = new Dictionary<Type, ContextConstructorInvoker>();

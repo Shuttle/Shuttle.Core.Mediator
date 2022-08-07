@@ -88,9 +88,9 @@ namespace Shuttle.Core.Mediator.Tests
 
             Assert.That(message.Messages.Count(), Is.EqualTo(6));
 
-            foreach (var observer in participants)
+            foreach (var participant in participants)
             {
-                Assert.That(((AbstractParticipant)observer).CallCount, Is.EqualTo(1));
+                Assert.That(((AbstractParticipant)participant).CallCount, Is.EqualTo(1));
             }
 
             Assert.That(beforeB.WhenCalled, Is.GreaterThan(beforeA.WhenCalled));

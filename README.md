@@ -13,12 +13,12 @@ In order to get all the relevant bits working you would need to register the `IM
 You can register the mediator using `IServiceCollection`:
 
 ```c#
-services.AddMediator(options =>
+services.AddMediator(builder =>
 {
-    options.AddParticipants(assembly);
-    options.AddParticipant<Participant>();
-    options.AddParticipant(participantType)
-    options.AddParticipant<Message>(participant)
+    builder.AddParticipants(assembly);
+    builder.AddParticipant<Participant>();
+    builder.AddParticipant(participantType)
+    builder.AddParticipant<Message>(participant)
 });
 ```
 
@@ -29,22 +29,17 @@ The core interface is the `IMediator` interface and the default implementation p
 This interface provides a synchronous calling mechanism and all `IParticipant` implementations need to be thread-safe singleton implementations that are added to the mediator at startup.  Any operations that require transient mechanisms should be handled by the relevant participant.
 
 ```c#
-IMediator Add(object participant);
-```
-
-The `Add` method registers the given participant.
-
-```c#
 void Send(object message, CancellationToken cancellationToken = default);
 ```
 
-The `Send` method will find all participants that implements the `IParticipant<T>` with the type `T` of the message type that you are sending.  Participants that are marked with the `BeforeObserverAttribute` filter will be executed first followed by all participants with no filters attributes and then finally all participants marked with the `AfterObserverAttribute` filter will be called.
+The `Send` method will find all participants that implements the `IParticipant<T>` with the type `T` of the message type that you are sending.  Participants that are marked with the `BeforeParticipantAttribute` filter will be executed first followed by all participants with no filter attributes and then finally all participants marked with the `AfterParticipantAttribute` filter will be called.
 
 ### Extensions
 
 ```c#
 Task SendAsync(this IMediator mediator, object message, CancellationToken cancellationToken = default)
 ```
+
 Sends a message asynchronously.
 
 ```c#
@@ -76,7 +71,7 @@ The only expectation from a `RequestMessage<TRequest>` instance is either a succ
 
 ### RequestResponseMessage\<TRequest, TResponse\>
 
-The `RequestResponseMessage<TRequest, TResponse>` takes an initial `TRequest` object and after the mediator processing would expect that there be a `TResponse` provided using the `.WithResponse(TResponse)` method.  The same success/failure mechanism used in the `RequestMessage<TRequest>` calss is also available on this class.
+The `RequestResponseMessage<TRequest, TResponse>` takes an initial `TRequest` object and after the mediator processing would expect that there be a `TResponse` provided using the `.WithResponse(TResponse)` method.  The same success/failure mechanism used in the `RequestMessage<TRequest>` class is also available on this class.
 
 ## Considerations
 
