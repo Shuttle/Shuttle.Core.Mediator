@@ -3,7 +3,7 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator.Tests
 {
-    public class WrittenParticipantA : AbstractObserver, IParticipant<MessageWritten>
+    public class WrittenParticipantA : AbstractParticipant, IParticipant<MessageWritten>
     {
         private readonly Guid _id = Guid.NewGuid();
 

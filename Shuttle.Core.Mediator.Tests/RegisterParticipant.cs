@@ -3,7 +3,7 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator.Tests
 {
-    public class RegisterParticipant : AbstractObserver, IParticipant<RegisterMessage>
+    public class RegisterParticipant : AbstractParticipant, IParticipant<RegisterMessage>
     {
         public void ProcessMessage(IParticipantContext<RegisterMessage> context)
         {

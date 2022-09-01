@@ -2,11 +2,11 @@
 
 namespace Shuttle.Core.Mediator
 {
-    public class BeforeObserverAttribute : Attribute
+    public class BeforeParticipantAttribute : Attribute
     {
     }
 
-    public class AfterObserverAttribute : Attribute
+    public class AfterParticipantAttribute : Attribute
     {
     }
 }

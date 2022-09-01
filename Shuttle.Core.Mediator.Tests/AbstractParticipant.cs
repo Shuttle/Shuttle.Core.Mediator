@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Threading;
 
 namespace Shuttle.Core.Mediator.Tests
 {
-    public abstract class AbstractObserver
+    public abstract class AbstractParticipant
     {
-        protected AbstractObserver()
+        protected AbstractParticipant()
         {
             Id = Guid.NewGuid();
         }
@@ -18,8 +17,6 @@ namespace Shuttle.Core.Mediator.Tests
         {
             CallCount++;
             WhenCalled = DateTime.Now;
-
-            Thread.Sleep(1);
         }
     }
 }
