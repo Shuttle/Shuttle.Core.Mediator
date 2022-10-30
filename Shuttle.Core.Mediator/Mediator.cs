@@ -21,6 +21,14 @@ namespace Shuttle.Core.Mediator
         private readonly Dictionary<Type, Participants> _participants = new();
         private readonly IServiceProvider _provider;
 
+        public event EventHandler<SendEventArgs> Sending = delegate
+        {
+        };
+
+        public event EventHandler<SendEventArgs> Sent = delegate
+        {
+        };
+
         public Mediator(IServiceProvider provider)
         {
             Guard.AgainstNull(provider, nameof(provider));
@@ -31,6 +39,10 @@ namespace Shuttle.Core.Mediator
         public void Send(object message, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(message, nameof(message));
+
+            var onSendEventArgs = new SendEventArgs(message,cancellationToken);
+
+            Sending.Invoke(this, onSendEventArgs);
 
             var messageType = message.GetType();
             var interfaceType = ParticipantType.MakeGenericType(messageType);
@@ -78,6 +90,8 @@ namespace Shuttle.Core.Mediator
             {
                 GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
+
+            Sent.Invoke(this, onSendEventArgs);
         }
 
         private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
