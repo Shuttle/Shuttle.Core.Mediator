@@ -7,9 +7,7 @@ namespace Shuttle.Core.Mediator
     {
         public ParticipantContext(TRequest message, CancellationToken cancellationToken)
         {
-            Guard.AgainstNull(message, nameof(message));
-
-            Message = message;
+            Message = Guard.AgainstNull(message, nameof(message));
             CancellationToken = cancellationToken;
         }
 

@@ -6,6 +6,16 @@ namespace Shuttle.Core.Mediator
 {
     public static class MediatorExtensions
     {
+        public static T Send<T>(this IMediator mediator, T message, CancellationToken cancellationToken = default)
+        {
+            Guard.AgainstNull(mediator, nameof(mediator));
+            Guard.AgainstNull(message, nameof(message));
+
+            mediator.Send(message, cancellationToken);
+
+            return message;
+        }
+
         /// <summary>
         ///     Sends a message asynchronously.
         /// </summary>
@@ -18,17 +28,7 @@ namespace Shuttle.Core.Mediator
             Guard.AgainstNull(mediator, nameof(mediator));
             Guard.AgainstNull(message, nameof(message));
 
-            return new Task(()=> mediator.Send(message, cancellationToken), cancellationToken);
-        }
-
-        public static T Send<T>(this IMediator mediator, T message, CancellationToken cancellationToken = default)
-        {
-            Guard.AgainstNull(mediator, nameof(mediator));
-            Guard.AgainstNull(message, nameof(message));
-
-            mediator.Send(message, cancellationToken);
-
-            return message;
+            return new Task(() => mediator.Send(message, cancellationToken), cancellationToken);
         }
     }
 }

@@ -31,9 +31,7 @@ namespace Shuttle.Core.Mediator
 
         public Mediator(IServiceProvider provider)
         {
-            Guard.AgainstNull(provider, nameof(provider));
-
-            _provider = provider;
+            _provider = Guard.AgainstNull(provider, nameof(provider));
         }
 
         public void Send(object message, CancellationToken cancellationToken = default)

@@ -15,9 +15,7 @@ namespace Shuttle.Core.Mediator
 
         public MediatorBuilder(IServiceCollection services)
         {
-            Guard.AgainstNull(services, nameof(services));
-
-            _services = services;
+            _services = Guard.AgainstNull(services, nameof(services));
         }
 
         public MediatorBuilder AddParticipants(Assembly assembly)
