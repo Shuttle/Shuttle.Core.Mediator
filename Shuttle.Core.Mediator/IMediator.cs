@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Shuttle.Core.Mediator
 {
@@ -8,6 +9,6 @@ namespace Shuttle.Core.Mediator
         event EventHandler<SendEventArgs> Sending;
         event EventHandler<SendEventArgs> Sent;
         
-        void Send(object message, CancellationToken cancellationToken = default);
+        Task Send(object message, CancellationToken cancellationToken = default);
     }
 }

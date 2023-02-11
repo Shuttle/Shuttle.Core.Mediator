@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -15,14 +16,18 @@ namespace Shuttle.Core.Mediator.Tests
             return _messagesReceived.Count(item => item.GetType() == type);
         }
 
-        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
+        public async Task ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
         {
             _messagesReceived.Add(context.Message);
+
+            await Task.CompletedTask;
         }
 
-        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
+        public async Task ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
         {
             _messagesReceived.Add(context.Message);
+
+            await Task.CompletedTask;
         }
     }
 

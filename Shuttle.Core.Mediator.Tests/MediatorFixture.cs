@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
@@ -29,7 +30,7 @@ namespace Shuttle.Core.Mediator.Tests
         }
 
         [Test]
-        public void Should_be_able_send_a_message_to_multiple_participants()
+        public async Task Should_be_able_send_a_message_to_multiple_participants()
         {
             var services = new ServiceCollection();
 
@@ -42,7 +43,7 @@ namespace Shuttle.Core.Mediator.Tests
             var provider = services.BuildServiceProvider();
             var mediator = new Mediator(provider);
 
-            mediator.Send(new MessageWritten { Text = "hello participants!" });
+            await mediator.Send(new MessageWritten { Text = "hello participants!" });
 
             foreach (var participant in provider.GetServices<IParticipant<MessageWritten>>())
             {
@@ -51,7 +52,7 @@ namespace Shuttle.Core.Mediator.Tests
         }
 
         [Test]
-        public void Should_be_able_to_perform_pipeline_processing()
+        public async Task Should_be_able_to_perform_pipeline_processing()
         {
             var services = new ServiceCollection();
 
@@ -84,7 +85,7 @@ namespace Shuttle.Core.Mediator.Tests
             var mediator = new Mediator(provider);
             var message = new RegisterMessage();
 
-            mediator.Send(message);
+            await mediator.Send(message);
 
             Assert.That(message.Messages.Count(), Is.EqualTo(6));
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
 
@@ -34,7 +35,7 @@ namespace Shuttle.Core.Mediator
             _provider = Guard.AgainstNull(provider, nameof(provider));
         }
 
-        public void Send(object message, CancellationToken cancellationToken = default)
+        public async Task Send(object message, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(message, nameof(message));
 
@@ -76,20 +77,22 @@ namespace Shuttle.Core.Mediator
 
             foreach (var participant in participants.Get(FilterSequence.Before))
             {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
             }
 
             foreach (var participant in participants.Get(FilterSequence.Actual))
             {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
             }
 
             foreach (var participant in participants.Get(FilterSequence.After))
             {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
             }
 
             Sent.Invoke(this, onSendEventArgs);
+
+            await Task.CompletedTask;
         }
 
         private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
@@ -246,7 +249,7 @@ namespace Shuttle.Core.Mediator
         public ContextMethodInvoker(MethodInfo methodInfo)
         {
             var dynamicMethod = new DynamicMethod(string.Empty,
-                typeof(void), new[] { typeof(object), typeof(object) },
+                typeof(Task), new[] { typeof(object), typeof(object) },
                 ParticipantContextType.Module);
 
             var il = dynamicMethod.GetILGenerator();
@@ -259,11 +262,11 @@ namespace Shuttle.Core.Mediator
             _invoker = (InvokeHandler)dynamicMethod.CreateDelegate(typeof(InvokeHandler));
         }
 
-        public void Invoke(object participant, object participantContext)
+        public async Task Invoke(object participant, object participantContext)
         {
-            _invoker.Invoke(participant, participantContext);
+            await _invoker.Invoke(participant, participantContext);
         }
 
-        private delegate void InvokeHandler(object handler, object handlerContext);
+        private delegate Task InvokeHandler(object handler, object handlerContext);
     }
 }
