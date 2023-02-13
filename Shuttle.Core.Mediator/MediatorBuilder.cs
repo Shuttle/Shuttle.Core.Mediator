@@ -24,7 +24,7 @@ namespace Shuttle.Core.Mediator
 
             var reflectionService = new ReflectionService();
 
-            var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly);
+            var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly).GetAwaiter().GetResult();
 
             foreach (var type in implementationTypes)
             {

@@ -20,14 +20,14 @@ namespace Shuttle.Core.Mediator.Tests
         {
             _messagesReceived.Add(context.Message);
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         public async Task ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
         {
             _messagesReceived.Add(context.Message);
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
         }
     }
 

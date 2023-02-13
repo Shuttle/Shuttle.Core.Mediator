@@ -19,7 +19,7 @@ namespace Shuttle.Core.Mediator.Tests
             CallCount++;
             WhenCalled = DateTime.Now;
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
         }
     }
 }

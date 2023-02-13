@@ -92,7 +92,7 @@ namespace Shuttle.Core.Mediator
 
             Sent.Invoke(this, onSendEventArgs);
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
