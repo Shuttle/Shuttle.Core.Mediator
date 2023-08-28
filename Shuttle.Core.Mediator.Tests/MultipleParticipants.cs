@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -9,33 +8,21 @@ namespace Shuttle.Core.Mediator.Tests
         IParticipant<MultipleParticipantMessageA>,
         IParticipant<MultipleParticipantMessageB>
     {
-        private static readonly List<object> _messagesReceived = new List<object>();
+        private static readonly List<object> MessagesReceived = new List<object>();
 
         public int MessageTypeCount(Type type)
         {
-            return _messagesReceived.Count(item => item.GetType() == type);
+            return MessagesReceived.Count(item => item.GetType() == type);
         }
 
-        public async Task ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
+        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
         {
-            _messagesReceived.Add(context.Message);
-
-            await Task.CompletedTask.ConfigureAwait(false);
+            MessagesReceived.Add(context.Message);
         }
 
-        public async Task ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
+        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
         {
-            _messagesReceived.Add(context.Message);
-
-            await Task.CompletedTask.ConfigureAwait(false);
+            MessagesReceived.Add(context.Message);
         }
-    }
-
-    public class MultipleParticipantMessageB
-    {
-    }
-
-    public class MultipleParticipantMessageA
-    {
     }
 }

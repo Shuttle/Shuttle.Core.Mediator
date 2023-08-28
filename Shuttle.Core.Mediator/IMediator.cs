@@ -8,7 +8,9 @@ namespace Shuttle.Core.Mediator
     {
         event EventHandler<SendEventArgs> Sending;
         event EventHandler<SendEventArgs> Sent;
-        
-        Task Send(object message, CancellationToken cancellationToken = default);
+
+        void Send(object message, CancellationToken cancellationToken = default);
+
+        Task SendAsync(object message, CancellationToken cancellationToken = default);
     }
 }

@@ -4,15 +4,15 @@ using Shuttle.Core.Contract;
 namespace Shuttle.Core.Mediator.Tests
 {
     [AfterParticipant]
-    public class AfterRegisterParticipant : AbstractParticipant, IParticipant<RegisterMessage>
+    public class AfterRegisterAsyncParticipant : AbstractParticipant, IAsyncParticipant<RegisterMessage>
     {
-        public void ProcessMessage(IParticipantContext<RegisterMessage> context)
+        public async Task ProcessMessage(IParticipantContext<RegisterMessage> context)
         {
             Guard.AgainstNull(context, nameof(context));
 
             context.Message.Touch($"[after] : {Id}");
 
-            Call();
+            await CallAsync();
         }
     }
 }

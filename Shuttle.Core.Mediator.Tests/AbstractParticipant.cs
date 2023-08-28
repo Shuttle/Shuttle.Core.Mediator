@@ -14,10 +14,15 @@ namespace Shuttle.Core.Mediator.Tests
         public int CallCount { get; private set; }
         public DateTime WhenCalled { get; private set; }
 
-        public async Task Call()
+        public void Call()
         {
             CallCount++;
             WhenCalled = DateTime.Now;
+        }
+
+        public async Task CallAsync()
+        {
+            Call();
 
             await Task.CompletedTask.ConfigureAwait(false);
         }

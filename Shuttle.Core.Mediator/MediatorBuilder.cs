@@ -10,7 +10,7 @@ namespace Shuttle.Core.Mediator
     public class MediatorBuilder
     {
         private readonly Type _participantType = typeof(IParticipant<>);
-        private readonly Type[] _participantTypeCollection = { typeof(IParticipant<>) };
+        private readonly Type _asyncParticipantType = typeof(IAsyncParticipant<>);
         private readonly IServiceCollection _services;
 
         public MediatorBuilder(IServiceCollection services)
@@ -24,9 +24,7 @@ namespace Shuttle.Core.Mediator
 
             var reflectionService = new ReflectionService();
 
-            var implementationTypes = reflectionService.GetTypesAssignableTo(_participantType, assembly).GetAwaiter().GetResult();
-
-            foreach (var type in implementationTypes)
+            foreach (var type in reflectionService.GetTypesAssignableTo(_participantType, assembly))
             {
                 var interfaces = type.GetInterfaces();
 
@@ -38,6 +36,21 @@ namespace Shuttle.Core.Mediator
                     }
 
                     _services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
+                }
+            }
+
+            foreach (var type in reflectionService.GetTypesAssignableTo(_asyncParticipantType, assembly))
+            {
+                var interfaces = type.GetInterfaces();
+
+                foreach (var @interface in interfaces)
+                {
+                    if (@interface.Name != _asyncParticipantType.Name)
+                    {
+                        continue;
+                    }
+
+                    _services.AddSingleton(_asyncParticipantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
                 }
             }
 
@@ -53,22 +66,44 @@ namespace Shuttle.Core.Mediator
 
         public MediatorBuilder AddParticipant(Type participantType)
         {
-            if (!participantType.IsAssignableTo(_participantType))
+            var isParticipantType = false;
+
+            if (participantType.IsAssignableTo(_participantType))
+            {
+                _services.AddSingleton(
+                    _participantType.MakeGenericType(participantType.GetInterface(_participantType.Name)
+                        .GetGenericArguments().First()), participantType);
+
+                isParticipantType = true;
+            }
+
+            if (participantType.IsAssignableTo(_asyncParticipantType))
+            {
+                _services.AddSingleton(
+                    _asyncParticipantType.MakeGenericType(participantType.GetInterface(_asyncParticipantType.Name)
+                        .GetGenericArguments().First()), participantType);
+
+                isParticipantType = true;
+            }
+            if (!isParticipantType)
             {
                 throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException,
                     participantType.Name));
             }
-
-            _services.AddSingleton(
-                _participantType.MakeGenericType(participantType.GetInterface(_participantType.Name)
-                    .GetGenericArguments().First()), participantType);
 
             return this;
         }
 
         public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
         {
-            _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), participant);
+            _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant, nameof(participant)));
+
+            return this;
+        }
+
+        public MediatorBuilder AddParticipant<TMessage>(IAsyncParticipant<TMessage> participant)
+        {
+            _services.AddSingleton(_asyncParticipantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant, nameof(participant)));
 
             return this;
         }

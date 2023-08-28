@@ -8,13 +8,13 @@ namespace Shuttle.Core.Mediator.Tests
     {
         private readonly Guid _id = Guid.NewGuid();
 
-        public async Task ProcessMessage(IParticipantContext<MessageWritten> context)
+        public void ProcessMessage(IParticipantContext<MessageWritten> context)
         {
             Guard.AgainstNull(context, nameof(context));
 
             Console.WriteLine($@"[event-{_id}] : text = '{context.Message.Text}'");
 
-            await Call();
+            Call();
         }
     }
 }

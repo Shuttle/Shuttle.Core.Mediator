@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
@@ -9,7 +10,7 @@ namespace Shuttle.Core.Mediator.Tests
     public class ServiceCollectionFixture
     {
         [Test]
-        public void Should_be_able_to_handle_MesageWritten()
+        public void Should_be_able_to_handle_MessageWritten()
         {
             const int count = 100;
 
@@ -29,14 +30,14 @@ namespace Shuttle.Core.Mediator.Tests
 
             for (var i = 0; i < count; i++)
             {
-                mediator.Send(new MessageWritten { Text = "hello participants!" });
+                mediator.SendAsync(new MessageWritten { Text = "hello participants!" });
             }
 
             sw.Stop();
 
             Console.WriteLine($@"Sent {count} messages in {sw.ElapsedMilliseconds} ms.");
 
-            foreach (var participant in provider.GetServices<IParticipant<MessageWritten>>())
+            foreach (var participant in provider.GetServices<IAsyncParticipant<MessageWritten>>())
             {
                 Assert.That(((AbstractParticipant)participant).CallCount, Is.EqualTo(count));
             }
@@ -62,6 +63,31 @@ namespace Shuttle.Core.Mediator.Tests
             mediator.Send(new MultipleParticipantMessageA());
 
             var multipleParticipants = provider.GetRequiredService<MultipleParticipants>();
+
+            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageA)), Is.EqualTo(2));
+            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageB)), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Should_be_able_to_add_participant_with_multiple_implementations_async()
+        {
+            var services = new ServiceCollection();
+
+            services.AddMediator(builder =>
+            {
+                builder.AddParticipants(GetType().Assembly);
+            });
+
+            services.AddSingleton<MultipleAsyncParticipants, MultipleAsyncParticipants>();
+
+            var provider = services.BuildServiceProvider();
+            var mediator = provider.GetRequiredService<IMediator>();
+
+            await mediator.SendAsync(new MultipleParticipantMessageA());
+            await mediator.SendAsync(new MultipleParticipantMessageB());
+            await mediator.SendAsync(new MultipleParticipantMessageA());
+
+            var multipleParticipants = provider.GetRequiredService<MultipleAsyncParticipants>();
 
             Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageA)), Is.EqualTo(2));
             Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageB)), Is.EqualTo(1));

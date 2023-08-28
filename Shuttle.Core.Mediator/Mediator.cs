@@ -14,7 +14,9 @@ namespace Shuttle.Core.Mediator
     {
         private static readonly Type BeforeParticipantAttributeType = typeof(BeforeParticipantAttribute);
         private static readonly Type AfterParticipantAttributeType = typeof(AfterParticipantAttribute);
+        private static readonly Type AsyncParticipantType = typeof(IAsyncParticipant<>);
         private static readonly Type ParticipantType = typeof(IParticipant<>);
+        private readonly Dictionary<string, ContextMethodInvokerAsync> _methodCacheAsync = new Dictionary<string, ContextMethodInvokerAsync>();
         private readonly Dictionary<string, ContextMethodInvoker> _methodCache = new Dictionary<string, ContextMethodInvoker>();
         private readonly Dictionary<Type, ContextConstructorInvoker> _constructorCache = new Dictionary<Type, ContextConstructorInvoker>();
 
@@ -35,11 +37,11 @@ namespace Shuttle.Core.Mediator
             _provider = Guard.AgainstNull(provider, nameof(provider));
         }
 
-        public async Task Send(object message, CancellationToken cancellationToken = default)
+        public void Send(object message, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(message, nameof(message));
 
-            var onSendEventArgs = new SendEventArgs(message,cancellationToken);
+            var onSendEventArgs = new SendEventArgs(message, cancellationToken);
 
             Sending.Invoke(this, onSendEventArgs);
 
@@ -77,22 +79,78 @@ namespace Shuttle.Core.Mediator
 
             foreach (var participant in participants.Get(FilterSequence.Before))
             {
-                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
 
             foreach (var participant in participants.Get(FilterSequence.Actual))
             {
-                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
 
             foreach (var participant in participants.Get(FilterSequence.After))
             {
-                await GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
 
             Sent.Invoke(this, onSendEventArgs);
+        }
 
-            await Task.CompletedTask.ConfigureAwait(false);
+        public async Task SendAsync(object message, CancellationToken cancellationToken = default)
+        {
+            Guard.AgainstNull(message, nameof(message));
+
+            var onSendEventArgs = new SendEventArgs(message,cancellationToken);
+
+            Sending.Invoke(this, onSendEventArgs);
+
+            var messageType = message.GetType();
+            var interfaceType = AsyncParticipantType.MakeGenericType(messageType);
+
+            if (!_participants.ContainsKey(interfaceType))
+            {
+                lock (Lock)
+                {
+                    _participants.Add(interfaceType, new Participants(_provider.GetServices(interfaceType)));
+                }
+            }
+
+            var participants = _participants[interfaceType];
+
+            if (!participants.Get(FilterSequence.Actual).Any())
+            {
+                throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
+            }
+
+            ContextConstructorInvoker contextConstructor;
+
+            lock (Lock)
+            {
+                if (!_constructorCache.TryGetValue(messageType, out contextConstructor))
+                {
+                    contextConstructor = new ContextConstructorInvoker(messageType);
+
+                    _constructorCache.Add(messageType, contextConstructor);
+                }
+            }
+
+            var participantContext = contextConstructor.CreateParticipantContext(message, cancellationToken);
+
+            foreach (var participant in participants.Get(FilterSequence.Before))
+            {
+                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+            }
+
+            foreach (var participant in participants.Get(FilterSequence.Actual))
+            {
+                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+            }
+
+            foreach (var participant in participants.Get(FilterSequence.After))
+            {
+                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+            }
+
+            Sent.Invoke(this, onSendEventArgs);
         }
 
         private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
@@ -127,6 +185,38 @@ namespace Shuttle.Core.Mediator
             }
         }
 
+        private ContextMethodInvokerAsync GetContextMethodInvokerAsync(Type participantType, Type messageType, Type interfaceType)
+        {
+            lock (Lock)
+            {
+                var key = $"{participantType.Name}:{messageType.Name}";
+
+                if (!_methodCacheAsync.TryGetValue(key, out var contextMethod))
+                {
+                    var method = participantType.GetInterfaceMap(interfaceType)
+                        .TargetMethods.SingleOrDefault();
+
+                    if (method == null)
+                    {
+                        throw new InvalidOperationException(string.Format(
+                            Resources.ProcessMessageMethodMissingException,
+                            participantType.FullName,
+                            messageType.FullName));
+                    }
+
+                    contextMethod = new ContextMethodInvokerAsync(
+                        participantType
+                            .GetInterfaceMap(AsyncParticipantType.MakeGenericType(messageType))
+                            .TargetMethods.SingleOrDefault()
+                    );
+
+                    _methodCacheAsync.Add(key, contextMethod);
+                }
+
+                return contextMethod;
+            }
+        }
+
         private enum FilterSequence
         {
             Before,
@@ -142,9 +232,7 @@ namespace Shuttle.Core.Mediator
 
             public Participants(IEnumerable<object> participants)
             {
-                Guard.AgainstNull(participants, nameof(participants));
-
-                foreach (var participant in participants)
+                foreach (var participant in Guard.AgainstNull(participants, nameof(participants)))
                 {
                     Add(participant);
                 }
@@ -225,6 +313,11 @@ namespace Shuttle.Core.Mediator
                 typeof(CancellationToken)
             });
 
+            if (constructorInfo == null)
+            {
+                throw new InvalidOperationException(string.Format(Resources.ContextConstructorException, contextType.FullName));
+            }
+
             il.Emit(OpCodes.Newobj, constructorInfo);
             il.Emit(OpCodes.Ret);
 
@@ -247,6 +340,36 @@ namespace Shuttle.Core.Mediator
         private readonly InvokeHandler _invoker;
 
         public ContextMethodInvoker(MethodInfo methodInfo)
+        {
+            var dynamicMethod = new DynamicMethod(string.Empty,
+                typeof(void), new[] { typeof(object), typeof(object) },
+                ParticipantContextType.Module);
+
+            var il = dynamicMethod.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+
+            il.EmitCall(OpCodes.Callvirt, methodInfo, null);
+            il.Emit(OpCodes.Ret);
+
+            _invoker = (InvokeHandler)dynamicMethod.CreateDelegate(typeof(InvokeHandler));
+        }
+
+        public void Invoke(object participant, object participantContext)
+        {
+            _invoker.Invoke(participant, participantContext);
+        }
+
+        private delegate void InvokeHandler(object handler, object handlerContext);
+    }
+
+    internal class ContextMethodInvokerAsync
+    {
+        private static readonly Type ParticipantContextType = typeof(ParticipantContext<>);
+
+        private readonly InvokeHandler _invoker;
+
+        public ContextMethodInvokerAsync(MethodInfo methodInfo)
         {
             var dynamicMethod = new DynamicMethod(string.Empty,
                 typeof(Task), new[] { typeof(object), typeof(object) },
