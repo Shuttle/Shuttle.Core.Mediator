@@ -53,6 +53,9 @@ namespace Shuttle.Core.Mediator.Tests
                 builder.AddParticipants(GetType().Assembly);
             });
 
+            var messageTracker = new MessageTracker();
+
+            services.AddSingleton<IMessageTracker>(messageTracker);
             services.AddSingleton<MultipleParticipants, MultipleParticipants>();
 
             var provider = services.BuildServiceProvider();
@@ -62,10 +65,8 @@ namespace Shuttle.Core.Mediator.Tests
             mediator.Send(new MultipleParticipantMessageB());
             mediator.Send(new MultipleParticipantMessageA());
 
-            var multipleParticipants = provider.GetRequiredService<MultipleParticipants>();
-
-            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageA)), Is.EqualTo(2));
-            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageB)), Is.EqualTo(1));
+            Assert.That(messageTracker.MessageTypeCount<MultipleParticipantMessageA>(), Is.EqualTo(2));
+            Assert.That(messageTracker.MessageTypeCount<MultipleParticipantMessageB>(), Is.EqualTo(1));
         }
 
         [Test]
@@ -78,7 +79,10 @@ namespace Shuttle.Core.Mediator.Tests
                 builder.AddParticipants(GetType().Assembly);
             });
 
-            services.AddSingleton<MultipleAsyncParticipants, MultipleAsyncParticipants>();
+            var messageTracker = new MessageTracker();
+
+            services.AddSingleton<IMessageTracker>(messageTracker);
+            services.AddSingleton<MultipleParticipants, MultipleParticipants>();
 
             var provider = services.BuildServiceProvider();
             var mediator = provider.GetRequiredService<IMediator>();
@@ -87,10 +91,10 @@ namespace Shuttle.Core.Mediator.Tests
             await mediator.SendAsync(new MultipleParticipantMessageB());
             await mediator.SendAsync(new MultipleParticipantMessageA());
 
-            var multipleParticipants = provider.GetRequiredService<MultipleAsyncParticipants>();
+            var multipleParticipants = provider.GetRequiredService<MultipleParticipants>();
 
-            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageA)), Is.EqualTo(2));
-            Assert.That(multipleParticipants.MessageTypeCount(typeof(MultipleParticipantMessageB)), Is.EqualTo(1));
+            Assert.That(messageTracker.MessageTypeCount<MultipleParticipantMessageA>(), Is.EqualTo(2));
+            Assert.That(messageTracker.MessageTypeCount<MultipleParticipantMessageB>(), Is.EqualTo(1));
         }
     }
 }

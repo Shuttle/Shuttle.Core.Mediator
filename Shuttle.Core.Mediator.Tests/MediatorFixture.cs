@@ -36,7 +36,7 @@ namespace Shuttle.Core.Mediator.Tests
 
             services.AddMediator(options =>
             {
-                options.AddParticipant<WriteAsyncParticipant>();
+                options.AddParticipant<WriteParticipant>();
             });
 
             var provider = services.BuildServiceProvider();
@@ -77,8 +77,8 @@ namespace Shuttle.Core.Mediator.Tests
 
             services.AddMediator(options =>
             {
-                options.AddParticipant<WrittenAsyncParticipantA>();
-                options.AddParticipant<WrittenAsyncParticipantB>();
+                options.AddParticipant<WrittenParticipantA>();
+                options.AddParticipant<WrittenParticipantB>();
             });
 
             var provider = services.BuildServiceProvider();
@@ -152,12 +152,12 @@ namespace Shuttle.Core.Mediator.Tests
         {
             var services = new ServiceCollection();
 
-            var beforeA = new BeforeRegisterAsyncParticipant();
-            var beforeB = new BeforeRegisterAsyncParticipant();
-            var registerA = new RegisterAsyncParticipant();
-            var registerB = new RegisterAsyncParticipant();
-            var afterA = new AfterRegisterAsyncParticipant();
-            var afterB = new AfterRegisterAsyncParticipant();
+            var beforeA = new BeforeRegisterParticipant();
+            var beforeB = new BeforeRegisterParticipant();
+            var registerA = new RegisterParticipant();
+            var registerB = new RegisterParticipant();
+            var afterA = new AfterRegisterParticipant();
+            var afterB = new AfterRegisterParticipant();
 
             var participants = new List<IAsyncParticipant<RegisterMessage>>
             {
