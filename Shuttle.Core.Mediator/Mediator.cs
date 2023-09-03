@@ -24,13 +24,9 @@ namespace Shuttle.Core.Mediator
         private readonly Dictionary<Type, Participants> _participants = new();
         private readonly IServiceProvider _provider;
 
-        public event EventHandler<SendEventArgs> Sending = delegate
-        {
-        };
+        public event EventHandler<SendEventArgs> Sending;
 
-        public event EventHandler<SendEventArgs> Sent = delegate
-        {
-        };
+        public event EventHandler<SendEventArgs> Sent;
 
         public Mediator(IServiceProvider provider)
         {
@@ -43,7 +39,7 @@ namespace Shuttle.Core.Mediator
 
             var onSendEventArgs = new SendEventArgs(message, cancellationToken);
 
-            Sending.Invoke(this, onSendEventArgs);
+            Sending?.Invoke(this, onSendEventArgs);
 
             var messageType = message.GetType();
             var interfaceType = ParticipantType.MakeGenericType(messageType);
@@ -92,7 +88,7 @@ namespace Shuttle.Core.Mediator
                 GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
             }
 
-            Sent.Invoke(this, onSendEventArgs);
+            Sent?.Invoke(this, onSendEventArgs);
         }
 
         public async Task SendAsync(object message, CancellationToken cancellationToken = default)
@@ -101,7 +97,7 @@ namespace Shuttle.Core.Mediator
 
             var onSendEventArgs = new SendEventArgs(message,cancellationToken);
 
-            Sending.Invoke(this, onSendEventArgs);
+            Sending?.Invoke(this, onSendEventArgs);
 
             var messageType = message.GetType();
             var interfaceType = AsyncParticipantType.MakeGenericType(messageType);
@@ -150,7 +146,7 @@ namespace Shuttle.Core.Mediator
                 await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
             }
 
-            Sent.Invoke(this, onSendEventArgs);
+            Sent?.Invoke(this, onSendEventArgs);
         }
 
         private ContextMethodInvoker GetContextMethodInvoker(Type participantType, Type messageType, Type interfaceType)
