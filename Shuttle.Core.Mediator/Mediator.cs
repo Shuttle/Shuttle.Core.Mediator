@@ -35,63 +35,15 @@ namespace Shuttle.Core.Mediator
 
         public void Send(object message, CancellationToken cancellationToken = default)
         {
-            Guard.AgainstNull(message, nameof(message));
-
-            var onSendEventArgs = new SendEventArgs(message, cancellationToken);
-
-            Sending?.Invoke(this, onSendEventArgs);
-
-            var messageType = message.GetType();
-            var interfaceType = ParticipantType.MakeGenericType(messageType);
-
-            if (!_participants.ContainsKey(interfaceType))
-            {
-                lock (Lock)
-                {
-                    _participants.Add(interfaceType, new Participants(_provider.GetServices(interfaceType)));
-                }
-            }
-
-            var participants = _participants[interfaceType];
-
-            if (!participants.Get(FilterSequence.Actual).Any())
-            {
-                throw new InvalidOperationException(string.Format(Resources.MissingParticipantException, messageType));
-            }
-
-            ContextConstructorInvoker contextConstructor;
-
-            lock (Lock)
-            {
-                if (!_constructorCache.TryGetValue(messageType, out contextConstructor))
-                {
-                    contextConstructor = new ContextConstructorInvoker(messageType);
-
-                    _constructorCache.Add(messageType, contextConstructor);
-                }
-            }
-
-            var participantContext = contextConstructor.CreateParticipantContext(message, cancellationToken);
-
-            foreach (var participant in participants.Get(FilterSequence.Before))
-            {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
-            }
-
-            foreach (var participant in participants.Get(FilterSequence.Actual))
-            {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
-            }
-
-            foreach (var participant in participants.Get(FilterSequence.After))
-            {
-                GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
-            }
-
-            Sent?.Invoke(this, onSendEventArgs);
+            SendAsync(message, cancellationToken, true).GetAwaiter().GetResult();
         }
 
         public async Task SendAsync(object message, CancellationToken cancellationToken = default)
+        {
+            await SendAsync(message, cancellationToken, false);
+        }
+
+        private async Task SendAsync(object message, CancellationToken cancellationToken, bool sync)
         {
             Guard.AgainstNull(message, nameof(message));
 
@@ -100,7 +52,9 @@ namespace Shuttle.Core.Mediator
             Sending?.Invoke(this, onSendEventArgs);
 
             var messageType = message.GetType();
-            var interfaceType = AsyncParticipantType.MakeGenericType(messageType);
+            var interfaceType = sync
+            ? ParticipantType.MakeGenericType(messageType)
+            : AsyncParticipantType.MakeGenericType(messageType);
 
             if (!_participants.ContainsKey(interfaceType))
             {
@@ -133,17 +87,38 @@ namespace Shuttle.Core.Mediator
 
             foreach (var participant in participants.Get(FilterSequence.Before))
             {
-                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                if (sync)
+                {
+                    GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext); 
+                }
+                else
+                {
+                    await (GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext)).ConfigureAwait(false);
+                }
             }
 
             foreach (var participant in participants.Get(FilterSequence.Actual))
             {
-                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                if (sync)
+                {
+                    GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+                }
+                else
+                {
+                    await (GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext)).ConfigureAwait(false);
+                }
             }
 
             foreach (var participant in participants.Get(FilterSequence.After))
             {
-                await GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext).ConfigureAwait(false);
+                if (sync)
+                {
+                    GetContextMethodInvoker(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext);
+                }
+                else
+                {
+                    await (GetContextMethodInvokerAsync(participant.GetType(), messageType, interfaceType).Invoke(participant, participantContext)).ConfigureAwait(false);
+                }
             }
 
             Sent?.Invoke(this, onSendEventArgs);
