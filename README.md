@@ -32,13 +32,15 @@ This interface provides a synchronous calling mechanism and all participant impl
 void Send(object message, CancellationToken cancellationToken = default);
 ```
 
-The `Send` method will find all participants that implement the `IParticipant<T>` with the type `T` of the message type that you are sending.  Participants that are marked with the `BeforeParticipantAttribute` filter will be executed first followed by all participants with no filter attributes and then finally all participants marked with the `AfterParticipantAttribute` filter will be called.
+The `Send` method will find all participants that implement the `IParticipant<T>` with the type `T` of the message type that you are sending.
 
 ```c#
 Task SendAsync(object message, CancellationToken cancellationToken = default);
 ```
 
-The `SendAsync` method will find all participants that implement the `IAsyncParticipant<T>` with the type `T` of the message type that you are sending.  Participants that are marked with the `BeforeParticipantAttribute` filter will be executed first followed by all participants with no filter attributes and then finally all participants marked with the `AfterParticipantAttribute` filter will be called.
+The `SendAsync` method will find all participants that implement the `IAsyncParticipant<T>` with the type `T` of the message type that you are sending.
+
+Participants that are marked with the `BeforeParticipantAttribute` filter will be executed first followed by all participants with no filter attributes and then finally all participants marked with the `AfterParticipantAttribute` filter will be called.
 
 ## Participants
 
