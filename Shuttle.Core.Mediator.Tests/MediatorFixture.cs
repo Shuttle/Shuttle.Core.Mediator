@@ -25,8 +25,7 @@ namespace Shuttle.Core.Mediator.Tests
 
             mediator.Send(new WriteMessage { Text = "hello world!" });
 
-            Assert.That(((AbstractParticipant)provider.GetRequiredService<IParticipant<WriteMessage>>()).CallCount,
-                Is.EqualTo(1));
+            Assert.That(((AbstractParticipant)provider.GetRequiredService<IParticipant<WriteMessage>>()).CallCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -44,8 +43,7 @@ namespace Shuttle.Core.Mediator.Tests
 
             await mediator.SendAsync(new WriteMessage { Text = "hello world!" });
 
-            Assert.That(((AbstractParticipant)provider.GetRequiredService<IAsyncParticipant<WriteMessage>>()).CallCount,
-                Is.EqualTo(1));
+            Assert.That(((AbstractParticipant)provider.GetRequiredService<IAsyncParticipant<WriteMessage>>()).CallCount, Is.EqualTo(1));
         }
 
         [Test]
