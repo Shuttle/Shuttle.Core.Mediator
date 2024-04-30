@@ -1,36 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Threading.Tasks;
+using Shuttle.Core.Contract;
 
-namespace Shuttle.Core.Mediator.Tests
+namespace Shuttle.Core.Mediator.Tests;
+
+public class MultipleParticipants :
+    IParticipant<MultipleParticipantMessageA>,
+    IParticipant<MultipleParticipantMessageB>,
+    IAsyncParticipant<MultipleParticipantMessageA>,
+    IAsyncParticipant<MultipleParticipantMessageB>
 {
-    public class MultipleParticipants : 
-        IParticipant<MultipleParticipantMessageA>,
-        IParticipant<MultipleParticipantMessageB>
+    private readonly IMessageTracker _messageTracker;
+
+    public MultipleParticipants(IMessageTracker messageTracker)
     {
-        private static readonly List<object> _messagesReceived = new List<object>();
-
-        public int MessageTypeCount(Type type)
-        {
-            return _messagesReceived.Count(item => item.GetType() == type);
-        }
-
-        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
-        {
-            _messagesReceived.Add(context.Message);
-        }
-
-        public void ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
-        {
-            _messagesReceived.Add(context.Message);
-        }
+        _messageTracker = Guard.AgainstNull(messageTracker, nameof(messageTracker));
     }
 
-    public class MultipleParticipantMessageB
+    public async Task ProcessMessageAsync(IParticipantContext<MultipleParticipantMessageA> context)
     {
+        _messageTracker.Received(context.Message);
+
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    public class MultipleParticipantMessageA
+    public async Task ProcessMessageAsync(IParticipantContext<MultipleParticipantMessageB> context)
     {
+        _messageTracker.Received(context.Message);
+
+        await Task.CompletedTask.ConfigureAwait(false);
+    }
+
+    public void ProcessMessage(IParticipantContext<MultipleParticipantMessageA> context)
+    {
+        _messageTracker.Received(context.Message);
+    }
+
+    public void ProcessMessage(IParticipantContext<MultipleParticipantMessageB> context)
+    {
+        _messageTracker.Received(context.Message);
     }
 }

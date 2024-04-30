@@ -61,6 +61,15 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Could not find the constructor for type &apos;{0}&apos;..
+        /// </summary>
+        public static string ContextConstructorException {
+            get {
+                return ResourceManager.GetString("ContextConstructorException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Participant with type name &apos;{0}&apos; does not implment `IParticipant&lt;T&gt;`..
         /// </summary>
         public static string InvalidParticipantTypeException {

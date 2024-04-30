@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Shuttle.Core.Mediator.Tests
 {
@@ -17,6 +18,13 @@ namespace Shuttle.Core.Mediator.Tests
         {
             CallCount++;
             WhenCalled = DateTime.Now;
+        }
+
+        public async Task CallAsync()
+        {
+            Call();
+
+            await Task.CompletedTask.ConfigureAwait(false);
         }
     }
 }
