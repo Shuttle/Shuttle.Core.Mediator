@@ -6,15 +6,13 @@ namespace Shuttle.Core.Mediator;
 
 public class SendEventArgs : EventArgs
 {
-    public Guid Id { get; } = Guid.NewGuid();
-    public object Message { get; }
-    public CancellationToken CancellationToken { get; }
-
     public SendEventArgs(object message, CancellationToken cancellationToken = default)
     {
-        Guard.AgainstNull(message, nameof(message));
-
-        Message = message;
+        Message = Guard.AgainstNull(message);
         CancellationToken = cancellationToken;
     }
+
+    public CancellationToken CancellationToken { get; }
+    public Guid Id { get; } = Guid.NewGuid();
+    public object Message { get; }
 }

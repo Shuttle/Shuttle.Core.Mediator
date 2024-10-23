@@ -1,12 +1,11 @@
 ﻿using System;
 
-namespace Shuttle.Core.Mediator
-{
-    public class BeforeParticipantAttribute : Attribute
-    {
-    }
+namespace Shuttle.Core.Mediator;
 
-    public class AfterParticipantAttribute : Attribute
-    {
-    }
+public class BeforeParticipantAttribute : Attribute
+{
+}
+
+public class AfterParticipantAttribute : Attribute
+{
 }

@@ -2,6 +2,6 @@
 
 public interface IMessageTracker
 {
-    void Received(object message);
     int MessageTypeCount<T>();
+    void Received(object message);
 }

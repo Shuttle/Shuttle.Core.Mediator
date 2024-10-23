@@ -1,7 +1,8 @@
-﻿namespace Shuttle.Core.Mediator
+﻿using System.Threading.Tasks;
+
+namespace Shuttle.Core.Mediator;
+
+public interface IParticipant<in T>
 {
-    public interface IParticipant<in T>
-    {
-        void ProcessMessage(IParticipantContext<T> context);
-    }
+    Task ProcessMessageAsync(IParticipantContext<T> context);
 }

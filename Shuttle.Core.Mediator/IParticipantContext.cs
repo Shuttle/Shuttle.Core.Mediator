@@ -1,10 +1,9 @@
 ﻿using System.Threading;
 
-namespace Shuttle.Core.Mediator
+namespace Shuttle.Core.Mediator;
+
+public interface IParticipantContext<out TRequest>
 {
-    public interface IParticipantContext<out TRequest>
-    {
-        TRequest Message { get; }
-        CancellationToken CancellationToken { get; }
-    }
+    CancellationToken CancellationToken { get; }
+    TRequest Message { get; }
 }

@@ -1,32 +1,31 @@
 ﻿using Shuttle.Core.Contract;
 
-namespace Shuttle.Core.Mediator
+namespace Shuttle.Core.Mediator;
+
+public class RequestMessage<TRequest>
 {
-    public class RequestMessage<TRequest>
+    public RequestMessage(TRequest request)
     {
-        public RequestMessage(TRequest request)
+        if (!typeof(TRequest).IsValueType)
         {
-            if (!typeof(TRequest).IsValueType)
-            {
-                Guard.AgainstNull(request, nameof(request));
-            }
-
-            Request = request;
+            Guard.AgainstNull(request);
         }
 
-        public TRequest Request { get; }
+        Request = request;
+    }
 
-        public bool Ok => string.IsNullOrWhiteSpace(Message);
+    public string Message { get; private set; } = default!;
 
-        public string Message { get; private set; }
+    public bool Ok => string.IsNullOrWhiteSpace(Message);
 
-        public RequestMessage<TRequest> Failed(string message)
-        {
-            Guard.AgainstNullOrEmptyString(message, nameof(message));
+    public TRequest? Request { get; }
 
-            Message = message;
+    public RequestMessage<TRequest> Failed(string message)
+    {
+        Guard.AgainstNullOrEmptyString(message);
 
-            return this;
-        }
+        Message = message;
+
+        return this;
     }
 }

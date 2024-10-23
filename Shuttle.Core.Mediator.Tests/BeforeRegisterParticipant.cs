@@ -1,27 +1,17 @@
 ﻿using System.Threading.Tasks;
 using Shuttle.Core.Contract;
 
-namespace Shuttle.Core.Mediator.Tests
+namespace Shuttle.Core.Mediator.Tests;
+
+[BeforeParticipant]
+public class BeforeRegisterParticipant : AbstractParticipant, IParticipant<RegisterMessage>
 {
-    [BeforeParticipant]
-    public class BeforeRegisterParticipant : AbstractParticipant, IParticipant<RegisterMessage>, IAsyncParticipant<RegisterMessage>
+    public async Task ProcessMessageAsync(IParticipantContext<RegisterMessage> context)
     {
-        public void ProcessMessage(IParticipantContext<RegisterMessage> context)
-        {
-            Guard.AgainstNull(context, nameof(context));
+        Guard.AgainstNull(context);
 
-            context.Message.Touch($"[before] : {Id}");
+        context.Message.Touch($"[before] : {Id}");
 
-            Call();
-        }
-
-        public async Task ProcessMessageAsync(IParticipantContext<RegisterMessage> context)
-        {
-            Guard.AgainstNull(context, nameof(context));
-
-            context.Message.Touch($"[before] : {Id}");
-
-            await CallAsync();
-        }
+        await CallAsync();
     }
 }
