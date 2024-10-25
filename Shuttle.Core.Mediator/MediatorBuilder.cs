@@ -28,7 +28,7 @@ public class MediatorBuilder
     {
         var isParticipantType = false;
 
-        if (Reflection.TypeExtensions.IsAssignableTo(participantType, _participantType)) 
+        if (participantType.IsAssignableToExpanded(_participantType)) 
         {
             var participantInterface = participantType.GetInterface(_participantType.Name);
 
@@ -63,7 +63,7 @@ public class MediatorBuilder
 
         var reflectionService = new ReflectionService();
 
-        foreach (var type in reflectionService.GetTypesAssignableToAsync(_participantType, assembly).GetAwaiter().GetResult())
+        foreach (var type in reflectionService.GetTypesAssignableToExpandedAsync(_participantType, assembly).GetAwaiter().GetResult())
         {
             var interfaces = type.GetInterfaces();
 
