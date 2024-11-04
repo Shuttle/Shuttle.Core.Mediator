@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
@@ -9,13 +12,17 @@ namespace Shuttle.Core.Mediator;
 
 public class MediatorBuilder
 {
-    private readonly Type _participantType = typeof(IParticipant<>);
-    private readonly IServiceCollection _services;
+    public IServiceCollection Services { get; }
 
+    private readonly Dictionary<Type, List<ParticipantDelegate>> _delegates = new();
+    private readonly Type _participantType = typeof(IParticipant<>);
+    
     public MediatorBuilder(IServiceCollection services)
     {
-        _services = Guard.AgainstNull(services);
+        Services = Guard.AgainstNull(services);
     }
+
+    public IDictionary<Type, List<ParticipantDelegate>> GetDelegates() => new ReadOnlyDictionary<Type, List<ParticipantDelegate>>(_delegates);
 
     public MediatorBuilder AddParticipant<TParticipant>()
     {
@@ -37,7 +44,7 @@ public class MediatorBuilder
                 throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
             }
 
-            _services.AddSingleton(_participantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participantType);
+            Services.AddSingleton(_participantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participantType);
 
             isParticipantType = true;
         }
@@ -52,7 +59,7 @@ public class MediatorBuilder
 
     public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
     {
-        _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant));
+        Services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant));
 
         return this;
     }
@@ -74,10 +81,69 @@ public class MediatorBuilder
                     continue;
                 }
 
-                _services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
+                Services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
             }
         }
 
         return this;
+    }
+
+    public MediatorBuilder MapParticipant<TMessage>(Delegate handler)
+    {
+        if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
+        {
+            throw new ApplicationException(Resources.AsyncDelegateRequiredException);
+        }
+
+        var parameters = handler.Method.GetParameters();
+        var messageType = typeof(TMessage);
+
+        foreach (var parameter in parameters)
+        {
+            var parameterType = parameter.ParameterType;
+
+            if (parameterType.IsCastableTo(typeof(IParticipantContext<>)))
+            {
+                var genericArguments = parameterType.GetGenericArguments();
+
+                if (genericArguments.Length == 1 &&
+                    Guard.AgainstNull(genericArguments[0]) != messageType)
+                {
+                    throw new ArgumentException(string.Format(Resources.ParticipantTypeException, messageType.Name, genericArguments[0].Name));
+                }
+            }
+        }
+
+        var participantDelegate = new ParticipantDelegate(handler, handler.Method.GetParameters().Select(item => item.ParameterType));
+
+        _delegates.TryAdd(messageType, new());
+        _delegates[messageType].Add(new(handler, handler.Method.GetParameters().Select(item => item.ParameterType)));
+
+        return this;
+    }
+}
+
+public class ParticipantDelegate
+{
+    private readonly IEnumerable<Type> _parameterTypes;
+    private readonly Type _participantContextType = typeof(IParticipantContext<>);
+
+    public ParticipantDelegate(Delegate handler, IEnumerable<Type> parameterTypes)
+    {
+        Handler = handler;
+        HasParameters = parameterTypes.Any();
+        _parameterTypes = parameterTypes;
+    }
+
+    public Delegate Handler { get; }
+    public bool HasParameters { get; }
+
+    public object[] GetParameters(IServiceProvider serviceProvider, object handlerContext)
+    {
+        return _parameterTypes
+            .Select(parameterType => !parameterType.IsCastableTo(_participantContextType)
+                ? serviceProvider.GetRequiredService(parameterType)
+                : handlerContext
+            ).ToArray();
     }
 }

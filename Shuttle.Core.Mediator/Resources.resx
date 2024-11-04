@@ -137,4 +137,15 @@
     <value>Type '{0}' does not have the required ProcessMessage method for message type '{1}'.</value>
     <comment>0 = full name of participant type, 1 = message type</comment>
   </data>
+  <data name="AsyncDelegateRequiredException" xml:space="preserve">
+    <value>Mapped delegates have to be async.</value>
+  </data>
+  <data name="ParticipantTypeException" xml:space="preserve">
+    <value>The delegate is mapped to message type `{0}` but requesting `IParticipantContext&lt;{1}&gt;`.</value>
+    <comment>0 = mapped message type name, 1 = requested message type name</comment>
+  </data>
+  <data name="DelegateAlreadyMappedException" xml:space="preserve">
+    <value>There is already a delegate mapped to message type '{0}'.</value>
+    <comment>0 = message type name</comment>
+  </data>
 </root>

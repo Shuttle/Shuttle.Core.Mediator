@@ -5,14 +5,9 @@ namespace Shuttle.Core.Mediator.Tests;
 
 public abstract class AbstractParticipant
 {
-    protected AbstractParticipant()
-    {
-        Id = Guid.NewGuid();
-    }
-
     public int CallCount { get; private set; }
 
-    public Guid Id { get; }
+    public Guid Id { get; } = Guid.NewGuid();
     public DateTime WhenCalled { get; private set; }
 
     public void Call()

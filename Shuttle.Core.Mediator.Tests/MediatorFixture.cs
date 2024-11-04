@@ -11,13 +11,13 @@ namespace Shuttle.Core.Mediator.Tests;
 public class MediatorFixture
 {
     [Test]
-    public async Task Should_be_able_to_send_a_message_to_a_single_participant_async()
+    public async Task Should_be_able_to_send_a_message_to_a_single_participant_delegate_async()
     {
         var services = new ServiceCollection();
 
-        services.AddMediator(options =>
+        services.AddMediator(builder =>
         {
-            options.AddParticipant<WriteParticipant>();
+            builder.AddParticipant<WriteParticipant>();
         });
 
         var provider = services.BuildServiceProvider();
@@ -29,18 +29,43 @@ public class MediatorFixture
     }
 
     [Test]
+    public async Task Should_be_able_to_send_a_message_to_a_single_participant_async()
+    {
+        var services = new ServiceCollection();
+
+        var callCount = 0;
+
+        services.AddMediator(builder =>
+        {
+            builder.MapParticipant<WriteMessage>(async (IParticipantContext<WriteMessage> context) =>
+            {
+                callCount++;
+
+                await Task.CompletedTask.ConfigureAwait(false);
+            });
+        });
+
+        var provider = services.BuildServiceProvider();
+        var mediator = provider.GetRequiredService<IMediator>();
+
+        await mediator.SendAsync(new WriteMessage { Text = "hello world!" });
+
+        Assert.That(callCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task Should_be_able_send_a_message_to_multiple_participants_async()
     {
         var services = new ServiceCollection();
 
-        services.AddMediator(options =>
+        services.AddMediator(builder =>
         {
-            options.AddParticipant<WrittenParticipantA>();
-            options.AddParticipant<WrittenParticipantB>();
+            builder.AddParticipant<WrittenParticipantA>();
+            builder.AddParticipant<WrittenParticipantB>();
         });
 
         var provider = services.BuildServiceProvider();
-        var mediator = new Mediator(provider);
+        var mediator = new Mediator(provider, new ParticipantDelegateProvider(new Dictionary<Type, List<ParticipantDelegate>>()));
 
         await mediator.SendAsync(new MessageWritten { Text = "hello participants!" });
 
@@ -55,49 +80,37 @@ public class MediatorFixture
     {
         var services = new ServiceCollection();
 
-        var beforeA = new BeforeRegisterParticipant();
-        var beforeB = new BeforeRegisterParticipant();
         var registerA = new RegisterParticipant();
         var registerB = new RegisterParticipant();
-        var afterA = new AfterRegisterParticipant();
-        var afterB = new AfterRegisterParticipant();
 
         var participants = new List<IParticipant<RegisterMessage>>
         {
-            beforeA,
-            beforeB,
             registerA,
-            registerB,
-            afterA,
-            afterB
+            registerB
         };
 
-        services.AddMediator(options =>
+        services.AddMediator(builder =>
         {
             foreach (var participant in participants)
             {
-                options.AddParticipant(participant);
+                builder.AddParticipant(participant);
             }
         });
 
         var provider = services.BuildServiceProvider();
-        var mediator = new Mediator(provider);
+        var mediator = new Mediator(provider, new ParticipantDelegateProvider(new Dictionary<Type, List<ParticipantDelegate>>()));
         var message = new RegisterMessage();
 
         await mediator.SendAsync(message);
 
-        Assert.That(message.Messages.Count(), Is.EqualTo(6));
+        Assert.That(message.Messages.Count(), Is.EqualTo(2));
 
         foreach (var participant in participants)
         {
             Assert.That(((AbstractParticipant)participant).CallCount, Is.EqualTo(1));
         }
 
-        Assert.That(beforeB.WhenCalled, Is.GreaterThan(beforeA.WhenCalled));
-        Assert.That(registerA.WhenCalled, Is.GreaterThan(beforeB.WhenCalled));
         Assert.That(registerB.WhenCalled, Is.GreaterThan(registerA.WhenCalled));
-        Assert.That(afterA.WhenCalled, Is.GreaterThan(registerB.WhenCalled));
-        Assert.That(afterB.WhenCalled, Is.GreaterThan(afterA.WhenCalled));
 
         foreach (var text in message.Messages)
         {

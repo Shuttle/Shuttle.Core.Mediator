@@ -11,9 +11,12 @@ public static class ServiceCollectionExtensions
     {
         Guard.AgainstNull(services);
 
-        builder?.Invoke(new(services));
+        var mediatorBuilder = new MediatorBuilder(services);
+
+        builder?.Invoke(mediatorBuilder);
 
         services.TryAddSingleton<IMediator, Mediator>();
+        services.AddSingleton<IParticipantDelegateProvider>(_ => new ParticipantDelegateProvider(mediatorBuilder.GetDelegates()));
 
         return services;
     }
