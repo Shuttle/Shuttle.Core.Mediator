@@ -115,7 +115,7 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The delegate is mapped to message type `{0}` but requesting `IParticipantContext&lt;{1}&gt;`..
+        ///   Looks up a localized string similar to The delegate must contain at least a parameter of type `IParticipantContext&lt;TMessage&gt;`..
         /// </summary>
         public static string ParticipantTypeException {
             get {

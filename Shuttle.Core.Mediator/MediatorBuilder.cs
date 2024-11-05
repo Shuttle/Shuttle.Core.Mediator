@@ -88,7 +88,7 @@ public class MediatorBuilder
         return this;
     }
 
-    public MediatorBuilder MapParticipant<TMessage>(Delegate handler)
+    public MediatorBuilder MapParticipant(Delegate handler)
     {
         if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
         {
@@ -96,7 +96,7 @@ public class MediatorBuilder
         }
 
         var parameters = handler.Method.GetParameters();
-        var messageType = typeof(TMessage);
+        Type? messageType = null;
 
         foreach (var parameter in parameters)
         {
@@ -104,17 +104,14 @@ public class MediatorBuilder
 
             if (parameterType.IsCastableTo(typeof(IParticipantContext<>)))
             {
-                var genericArguments = parameterType.GetGenericArguments();
-
-                if (genericArguments.Length == 1 &&
-                    Guard.AgainstNull(genericArguments[0]) != messageType)
-                {
-                    throw new ArgumentException(string.Format(Resources.ParticipantTypeException, messageType.Name, genericArguments[0].Name));
-                }
+                messageType = parameterType.GetGenericArguments()[0];
             }
         }
 
-        var participantDelegate = new ParticipantDelegate(handler, handler.Method.GetParameters().Select(item => item.ParameterType));
+        if (messageType == null)
+        {
+            throw new ApplicationException(Resources.ParticipantTypeException);
+        }
 
         _delegates.TryAdd(messageType, new());
         _delegates[messageType].Add(new(handler, handler.Method.GetParameters().Select(item => item.ParameterType)));

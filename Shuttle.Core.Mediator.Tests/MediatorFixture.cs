@@ -37,7 +37,7 @@ public class MediatorFixture
 
         services.AddMediator(builder =>
         {
-            builder.MapParticipant<WriteMessage>(async (IParticipantContext<WriteMessage> context) =>
+            builder.MapParticipant(async (IParticipantContext<WriteMessage> context) =>
             {
                 callCount++;
 

@@ -141,8 +141,7 @@
     <value>Mapped delegates have to be async.</value>
   </data>
   <data name="ParticipantTypeException" xml:space="preserve">
-    <value>The delegate is mapped to message type `{0}` but requesting `IParticipantContext&lt;{1}&gt;`.</value>
-    <comment>0 = mapped message type name, 1 = requested message type name</comment>
+    <value>The delegate must contain at least a parameter of type `IParticipantContext&lt;TMessage&gt;`.</value>
   </data>
   <data name="DelegateAlreadyMappedException" xml:space="preserve">
     <value>There is already a delegate mapped to message type '{0}'.</value>
