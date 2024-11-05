@@ -119,28 +119,3 @@ public class MediatorBuilder
         return this;
     }
 }
-
-public class ParticipantDelegate
-{
-    private readonly IEnumerable<Type> _parameterTypes;
-    private readonly Type _participantContextType = typeof(IParticipantContext<>);
-
-    public ParticipantDelegate(Delegate handler, IEnumerable<Type> parameterTypes)
-    {
-        Handler = handler;
-        HasParameters = parameterTypes.Any();
-        _parameterTypes = parameterTypes;
-    }
-
-    public Delegate Handler { get; }
-    public bool HasParameters { get; }
-
-    public object[] GetParameters(IServiceProvider serviceProvider, object handlerContext)
-    {
-        return _parameterTypes
-            .Select(parameterType => !parameterType.IsCastableTo(_participantContextType)
-                ? serviceProvider.GetRequiredService(parameterType)
-                : handlerContext
-            ).ToArray();
-    }
-}
