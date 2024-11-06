@@ -15,8 +15,9 @@ public class MediatorBuilder
     public IServiceCollection Services { get; }
 
     private readonly Dictionary<Type, List<ParticipantDelegate>> _delegates = new();
-    private readonly Type _participantType = typeof(IParticipant<>);
-    
+    private static readonly Type ParticipantType = typeof(IParticipant<>);
+    private static readonly Type ParticipantContextType = typeof(IParticipantContext<>);
+
     public MediatorBuilder(IServiceCollection services)
     {
         Services = Guard.AgainstNull(services);
@@ -35,16 +36,16 @@ public class MediatorBuilder
     {
         var isParticipantType = false;
 
-        if (participantType.IsCastableTo(_participantType)) 
+        if (participantType.IsCastableTo(ParticipantType)) 
         {
-            var participantInterface = participantType.GetInterface(_participantType.Name);
+            var participantInterface = participantType.GetInterface(ParticipantType.Name);
 
             if (participantInterface == null)
             {
                 throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
             }
 
-            Services.AddSingleton(_participantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participantType);
+            Services.AddSingleton(ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participantType);
 
             isParticipantType = true;
         }
@@ -59,7 +60,7 @@ public class MediatorBuilder
 
     public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
     {
-        Services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant));
+        Services.AddSingleton(ParticipantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant));
 
         return this;
     }
@@ -70,18 +71,18 @@ public class MediatorBuilder
 
         var reflectionService = new ReflectionService();
 
-        foreach (var type in reflectionService.GetTypesCastableToAsync(_participantType, assembly).GetAwaiter().GetResult())
+        foreach (var type in reflectionService.GetTypesCastableToAsync(ParticipantType, assembly).GetAwaiter().GetResult())
         {
             var interfaces = type.GetInterfaces();
 
             foreach (var @interface in interfaces)
             {
-                if (@interface.Name != _participantType.Name)
+                if (@interface.Name != ParticipantType.Name)
                 {
                     continue;
                 }
 
-                Services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
+                Services.AddSingleton(ParticipantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
             }
         }
 
@@ -102,7 +103,7 @@ public class MediatorBuilder
         {
             var parameterType = parameter.ParameterType;
 
-            if (parameterType.IsCastableTo(typeof(IParticipantContext<>)))
+            if (parameterType.IsCastableTo(ParticipantContextType))
             {
                 messageType = parameterType.GetGenericArguments()[0];
             }
