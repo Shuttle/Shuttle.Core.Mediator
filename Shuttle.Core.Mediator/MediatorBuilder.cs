@@ -32,8 +32,9 @@ public class MediatorBuilder
         return this;
     }
 
-    public MediatorBuilder AddParticipant(Type participantType)
+    public MediatorBuilder AddParticipant(Type participantType, Func<Type, ServiceLifetime>? getServiceLifetime = null)
     {
+        getServiceLifetime ??= _ => ServiceLifetime.Singleton;
         var isParticipantType = false;
 
         if (participantType.IsCastableTo(ParticipantType)) 
@@ -45,7 +46,9 @@ public class MediatorBuilder
                 throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
             }
 
-            Services.AddSingleton(ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participantType);
+            var genericType = ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First());
+
+            Services.Add(new(genericType, participantType, getServiceLifetime(genericType)));
 
             isParticipantType = true;
         }
@@ -54,13 +57,6 @@ public class MediatorBuilder
         {
             throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
         }
-
-        return this;
-    }
-
-    public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
-    {
-        Services.AddSingleton(ParticipantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant));
 
         return this;
     }
@@ -89,7 +85,7 @@ public class MediatorBuilder
         return this;
     }
 
-    public MediatorBuilder MapParticipant(Delegate handler)
+    public MediatorBuilder AddParticipant(Delegate handler)
     {
         if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
         {

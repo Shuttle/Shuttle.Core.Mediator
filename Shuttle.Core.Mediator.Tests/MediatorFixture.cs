@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using NUnit.Framework;
+using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Mediator.Tests;
 
@@ -37,7 +39,7 @@ public class MediatorFixture
 
         services.AddMediator(builder =>
         {
-            builder.MapParticipant(async (IParticipantContext<WriteMessage> context) =>
+            builder.AddParticipant(async (IParticipantContext<WriteMessage> context) =>
             {
                 callCount++;
 
@@ -89,13 +91,10 @@ public class MediatorFixture
             registerB
         };
 
-        services.AddMediator(builder =>
-        {
-            foreach (var participant in participants)
-            {
-                builder.AddParticipant(participant);
-            }
-        });
+        services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerA));
+        services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerB));
+
+        services.AddMediator();
 
         var provider = services.BuildServiceProvider();
         var mediator = new Mediator(provider, new ParticipantDelegateProvider(new Dictionary<Type, List<ParticipantDelegate>>()));
