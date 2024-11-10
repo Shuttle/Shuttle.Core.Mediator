@@ -115,4 +115,9 @@ public class MediatorBuilder
 
         return this;
     }
+
+    public MediatorBuilder AddParticipant(object participant)
+    {
+        throw new NotImplementedException();
+    }
 }

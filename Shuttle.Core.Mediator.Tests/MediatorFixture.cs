@@ -85,16 +85,14 @@ public class MediatorFixture
         var registerA = new RegisterParticipant();
         var registerB = new RegisterParticipant();
 
-        var participants = new List<IParticipant<RegisterMessage>>
-        {
-            registerA,
-            registerB
-        };
-
         services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerA));
         services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerB));
 
-        services.AddMediator();
+        services.AddMediator(builder =>
+        {
+            builder.AddParticipant(registerA);
+            builder.AddParticipant(registerB);
+        });
 
         var provider = services.BuildServiceProvider();
         var mediator = new Mediator(provider, new ParticipantDelegateProvider(new Dictionary<Type, List<ParticipantDelegate>>()));
