@@ -85,9 +85,6 @@ public class MediatorFixture
         var registerA = new RegisterParticipant();
         var registerB = new RegisterParticipant();
 
-        services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerA));
-        services.AddSingleton(typeof(IParticipant<>).MakeGenericType(typeof(RegisterMessage)), Guard.AgainstNull(registerB));
-
         services.AddMediator(builder =>
         {
             builder.AddParticipant(registerA);
@@ -102,10 +99,8 @@ public class MediatorFixture
 
         Assert.That(message.Messages.Count(), Is.EqualTo(2));
 
-        foreach (var participant in participants)
-        {
-            Assert.That(((AbstractParticipant)participant).CallCount, Is.EqualTo(1));
-        }
+        Assert.That(registerA.CallCount, Is.EqualTo(1));
+        Assert.That(registerB.CallCount, Is.EqualTo(1));
 
         Assert.That(registerB.WhenCalled, Is.GreaterThan(registerA.WhenCalled));
 

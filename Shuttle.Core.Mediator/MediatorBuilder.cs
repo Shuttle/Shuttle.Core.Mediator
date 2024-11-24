@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
@@ -118,6 +119,24 @@ public class MediatorBuilder
 
     public MediatorBuilder AddParticipant(object participant)
     {
-        throw new NotImplementedException();
+        Guard.AgainstNull(participant);
+
+        var participantType = participant.GetType();
+
+        if (!participantType.IsCastableTo(ParticipantType))
+        {
+            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
+        }
+
+        var participantInterface = participantType.GetInterface(ParticipantType.Name);
+
+        if (participantInterface == null)
+        {
+            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
+        }
+
+        Services.AddSingleton(ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participant);
+
+        return this;
     }
 }
