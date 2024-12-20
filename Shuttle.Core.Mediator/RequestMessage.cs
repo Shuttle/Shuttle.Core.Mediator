@@ -18,7 +18,7 @@ public class RequestMessage<TRequest>
 
     public bool Ok => string.IsNullOrWhiteSpace(Message);
 
-    public TRequest? Request { get; }
+    public TRequest Request { get; }
 
     public RequestMessage<TRequest> Failed(string message)
     {
