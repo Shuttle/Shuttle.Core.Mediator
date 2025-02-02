@@ -10,7 +10,7 @@ public class MessageTracker : IMessageTracker
 
     public void Received(object message)
     {
-        _messagesReceived.Add(Guard.AgainstNull(message, nameof(message)));
+        _messagesReceived.Add(Guard.AgainstNull(message));
     }
 
     public int MessageTypeCount<T>()

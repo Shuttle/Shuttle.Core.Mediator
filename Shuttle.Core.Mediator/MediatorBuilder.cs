@@ -1,111 +1,142 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
-namespace Shuttle.Core.Mediator
+namespace Shuttle.Core.Mediator;
+
+public class MediatorBuilder
 {
-    public class MediatorBuilder
+    public IServiceCollection Services { get; }
+
+    private readonly Dictionary<Type, List<ParticipantDelegate>> _delegates = new();
+    private static readonly Type ParticipantType = typeof(IParticipant<>);
+    private static readonly Type ParticipantContextType = typeof(IParticipantContext<>);
+
+    public MediatorBuilder(IServiceCollection services)
     {
-        private readonly Type _participantType = typeof(IParticipant<>);
-        private readonly Type _asyncParticipantType = typeof(IAsyncParticipant<>);
-        private readonly IServiceCollection _services;
+        Services = Guard.AgainstNull(services);
+    }
 
-        public MediatorBuilder(IServiceCollection services)
+    public IDictionary<Type, List<ParticipantDelegate>> GetDelegates() => new ReadOnlyDictionary<Type, List<ParticipantDelegate>>(_delegates);
+
+    public MediatorBuilder AddParticipant<TParticipant>()
+    {
+        AddParticipant(typeof(TParticipant));
+
+        return this;
+    }
+
+    public MediatorBuilder AddParticipant(Type participantType, Func<Type, ServiceLifetime>? getServiceLifetime = null)
+    {
+        getServiceLifetime ??= _ => ServiceLifetime.Singleton;
+        var isParticipantType = false;
+
+        if (participantType.IsCastableTo(ParticipantType)) 
         {
-            _services = Guard.AgainstNull(services, nameof(services));
+            var participantInterface = participantType.GetInterface(ParticipantType.Name);
+
+            if (participantInterface == null)
+            {
+                throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
+            }
+
+            var genericType = ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First());
+
+            Services.Add(new(genericType, participantType, getServiceLifetime(genericType)));
+
+            isParticipantType = true;
         }
 
-        public MediatorBuilder AddParticipants(Assembly assembly)
+        if (!isParticipantType)
         {
-            Guard.AgainstNull(assembly, nameof(assembly));
+            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
+        }
 
-            var reflectionService = new ReflectionService();
+        return this;
+    }
 
-            foreach (var type in reflectionService.GetTypesAssignableTo(_participantType, assembly))
+    public MediatorBuilder AddParticipants(Assembly assembly)
+    {
+        Guard.AgainstNull(assembly);
+
+        var reflectionService = new ReflectionService();
+
+        foreach (var type in reflectionService.GetTypesCastableToAsync(ParticipantType, assembly).GetAwaiter().GetResult())
+        {
+            var interfaces = type.GetInterfaces();
+
+            foreach (var @interface in interfaces)
             {
-                var interfaces = type.GetInterfaces();
-
-                foreach (var @interface in interfaces)
+                if (@interface.Name != ParticipantType.Name)
                 {
-                    if (@interface.Name != _participantType.Name)
-                    {
-                        continue;
-                    }
-
-                    _services.AddSingleton(_participantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
+                    continue;
                 }
+
+                Services.AddSingleton(ParticipantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
             }
-
-            foreach (var type in reflectionService.GetTypesAssignableTo(_asyncParticipantType, assembly))
-            {
-                var interfaces = type.GetInterfaces();
-
-                foreach (var @interface in interfaces)
-                {
-                    if (@interface.Name != _asyncParticipantType.Name)
-                    {
-                        continue;
-                    }
-
-                    _services.AddSingleton(_asyncParticipantType.MakeGenericType(@interface.GetGenericArguments().First()), type);
-                }
-            }
-
-            return this;
         }
 
-        public MediatorBuilder AddParticipant<TParticipant>()
+        return this;
+    }
+
+    public MediatorBuilder AddParticipant(Delegate handler)
+    {
+        if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
         {
-            AddParticipant(typeof(TParticipant));
-
-            return this;
+            throw new ApplicationException(Resources.AsyncDelegateRequiredException);
         }
 
-        public MediatorBuilder AddParticipant(Type participantType)
+        var parameters = handler.Method.GetParameters();
+        Type? messageType = null;
+
+        foreach (var parameter in parameters)
         {
-            var isParticipantType = false;
+            var parameterType = parameter.ParameterType;
 
-            if (participantType.IsAssignableTo(_participantType))
+            if (parameterType.IsCastableTo(ParticipantContextType))
             {
-                _services.AddSingleton(
-                    _participantType.MakeGenericType(participantType.GetInterface(_participantType.Name)
-                        .GetGenericArguments().First()), participantType);
-
-                isParticipantType = true;
+                messageType = parameterType.GetGenericArguments()[0];
             }
-
-            if (participantType.IsAssignableTo(_asyncParticipantType))
-            {
-                _services.AddSingleton(
-                    _asyncParticipantType.MakeGenericType(participantType.GetInterface(_asyncParticipantType.Name)
-                        .GetGenericArguments().First()), participantType);
-
-                isParticipantType = true;
-            }
-            if (!isParticipantType)
-            {
-                throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException,
-                    participantType.Name));
-            }
-
-            return this;
         }
 
-        public MediatorBuilder AddParticipant<TMessage>(IParticipant<TMessage> participant)
+        if (messageType == null)
         {
-            _services.AddSingleton(_participantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant, nameof(participant)));
-
-            return this;
+            throw new ApplicationException(Resources.ParticipantTypeException);
         }
 
-        public MediatorBuilder AddParticipant<TMessage>(IAsyncParticipant<TMessage> participant)
+        _delegates.TryAdd(messageType, new());
+        _delegates[messageType].Add(new(handler, handler.Method.GetParameters().Select(item => item.ParameterType)));
+
+        return this;
+    }
+
+    public MediatorBuilder AddParticipant(object participant)
+    {
+        Guard.AgainstNull(participant);
+
+        var participantType = participant.GetType();
+
+        if (!participantType.IsCastableTo(ParticipantType))
         {
-            _services.AddSingleton(_asyncParticipantType.MakeGenericType(typeof(TMessage)), Guard.AgainstNull(participant, nameof(participant)));
-
-            return this;
+            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
         }
+
+        var participantInterface = participantType.GetInterface(ParticipantType.Name);
+
+        if (participantInterface == null)
+        {
+            throw new InvalidOperationException(string.Format(Resources.InvalidParticipantTypeException, participantType.Name));
+        }
+
+        Services.AddSingleton(ParticipantType.MakeGenericType(participantInterface.GetGenericArguments().First()), participant);
+
+        return this;
     }
 }

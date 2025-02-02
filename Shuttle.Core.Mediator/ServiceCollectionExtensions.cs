@@ -3,19 +3,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shuttle.Core.Contract;
 
-namespace Shuttle.Core.Mediator
+namespace Shuttle.Core.Mediator;
+
+public static class ServiceCollectionExtensions
 {
-    public static class ServiceCollectionExtensions
+    public static IServiceCollection AddMediator(this IServiceCollection services, Action<MediatorBuilder>? builder = null)
     {
-        public static IServiceCollection AddMediator(this IServiceCollection services, Action<MediatorBuilder> builder = null)
-        {
-            Guard.AgainstNull(services, nameof(services));
+        Guard.AgainstNull(services);
 
-            builder?.Invoke(new MediatorBuilder(services));
+        var mediatorBuilder = new MediatorBuilder(services);
 
-            services.TryAddSingleton<IMediator, Mediator>();
+        builder?.Invoke(mediatorBuilder);
 
-            return services;
-        }
+        services.TryAddSingleton<IMediator, Mediator>();
+        services.AddSingleton<IParticipantDelegateProvider>(_ => new ParticipantDelegateProvider(mediatorBuilder.GetDelegates()));
+
+        return services;
     }
 }

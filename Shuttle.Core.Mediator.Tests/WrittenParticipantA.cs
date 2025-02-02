@@ -2,28 +2,18 @@
 using System.Threading.Tasks;
 using Shuttle.Core.Contract;
 
-namespace Shuttle.Core.Mediator.Tests
+namespace Shuttle.Core.Mediator.Tests;
+
+public class WrittenParticipantA : AbstractParticipant, IParticipant<MessageWritten>
 {
-    public class WrittenParticipantA : AbstractParticipant, IParticipant<MessageWritten>, IAsyncParticipant<MessageWritten>
+    private readonly Guid _id = Guid.NewGuid();
+
+    public async Task ProcessMessageAsync(IParticipantContext<MessageWritten> context)
     {
-        private readonly Guid _id = Guid.NewGuid();
+        Guard.AgainstNull(context);
 
-        public void ProcessMessage(IParticipantContext<MessageWritten> context)
-        {
-            Guard.AgainstNull(context, nameof(context));
+        Console.WriteLine($@"[event-{_id}] : text = '{context.Message.Text}'");
 
-            Console.WriteLine($@"[event-{_id}] : text = '{context.Message.Text}'");
-
-            Call();
-        }
-
-        public async Task ProcessMessageAsync(IParticipantContext<MessageWritten> context)
-        {
-            Guard.AgainstNull(context, nameof(context));
-
-            Console.WriteLine($@"[event-{_id}] : text = '{context.Message.Text}'");
-
-            await CallAsync();
-        }
+        await CallAsync();
     }
 }

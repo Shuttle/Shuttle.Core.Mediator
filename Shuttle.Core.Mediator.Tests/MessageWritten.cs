@@ -1,7 +1,6 @@
-﻿namespace Shuttle.Core.Mediator.Tests
+﻿namespace Shuttle.Core.Mediator.Tests;
+
+public class MessageWritten
 {
-    public class MessageWritten
-    {
-        public string Text { get; set; }
-    }
+    public string Text { get; set; }
 }

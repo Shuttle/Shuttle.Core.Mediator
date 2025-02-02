@@ -61,11 +61,29 @@ namespace Shuttle.Core.Mediator {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Mapped delegates have to be async..
+        /// </summary>
+        public static string AsyncDelegateRequiredException {
+            get {
+                return ResourceManager.GetString("AsyncDelegateRequiredException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Could not find the constructor for type &apos;{0}&apos;..
         /// </summary>
         public static string ContextConstructorException {
             get {
                 return ResourceManager.GetString("ContextConstructorException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to There is already a delegate mapped to message type &apos;{0}&apos;..
+        /// </summary>
+        public static string DelegateAlreadyMappedException {
+            get {
+                return ResourceManager.GetString("DelegateAlreadyMappedException", resourceCulture);
             }
         }
         
@@ -93,6 +111,15 @@ namespace Shuttle.Core.Mediator {
         public static string ParticipantInterfaceMissingException {
             get {
                 return ResourceManager.GetString("ParticipantInterfaceMissingException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The delegate must contain a parameter of type `IParticipantContext&lt;TMessage&gt;`..
+        /// </summary>
+        public static string ParticipantTypeException {
+            get {
+                return ResourceManager.GetString("ParticipantTypeException", resourceCulture);
             }
         }
         
